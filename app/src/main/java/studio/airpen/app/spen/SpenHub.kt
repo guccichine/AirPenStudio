@@ -1,8 +1,6 @@
 package studio.airpen.app.spen
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import com.samsung.android.sdk.penremote.AirMotionEvent
 import com.samsung.android.sdk.penremote.ButtonEvent
@@ -21,7 +19,6 @@ data class PenButton(val down: Boolean, val t: Long)
 enum class SpenStatus { UNKNOWN, UNSUPPORTED, DISCONNECTED, CONNECTING, CONNECTED, ERROR }
 
 class SpenHub(private val appContext: Context) {
-    private val main = Handler(Looper.getMainLooper())
     private var unitManager: SpenUnitManager? = null
     private var activityContext: Context? = null
 
@@ -37,24 +34,24 @@ class SpenHub(private val appContext: Context) {
 
     @Volatile var settings: GestureSettings = GestureSettings()
 
-    fun attachActivity(context: Context) {
-        activityContext = context
-    }
+    fun attachActivity(context: Context) { activityContext = context }
 
     fun connect() {
+        if (_status.value == SpenStatus.CONNECTING) return
         if (!isDeviceSupported()) {
             _status.value = SpenStatus.UNSUPPORTED
             connectionListener?.invoke(SpenStatus.UNSUPPORTED)
             return
         }
-        val remote = SpenRemote.getInstance()
-        if (remote.isConnected) {
-            _status.value = SpenStatus.CONNECTED
-            return
-        }
-        _status.value = SpenStatus.CONNECTING
-        val ctx = activityContext ?: appContext
         try {
+            val remote = SpenRemote.getInstance()
+            if (remote.isConnected) {
+                _status.value = SpenStatus.CONNECTED
+                registerListeners()
+                return
+            }
+            _status.value = SpenStatus.CONNECTING
+            val ctx = activityContext ?: appContext
             remote.connect(ctx, object : SpenRemote.ConnectionResultCallback {
                 override fun onSuccess(manager: SpenUnitManager) {
                     unitManager = manager
@@ -63,22 +60,15 @@ class SpenHub(private val appContext: Context) {
                     connectionListener?.invoke(SpenStatus.CONNECTED)
                     Log.i(TAG, "S Pen connected")
                 }
-
                 override fun onFailure(error: Int) {
-                    val st = if (error == SpenRemote.Error.UNSUPPORTED_DEVICE) {
-                        SpenStatus.UNSUPPORTED
-                    } else {
-                        SpenStatus.ERROR
-                    }
+                    val st = if (error == SpenRemote.Error.UNSUPPORTED_DEVICE) SpenStatus.UNSUPPORTED else SpenStatus.ERROR
                     _status.value = st
                     connectionListener?.invoke(st)
                     Log.w(TAG, "S Pen connect failed: $error")
                 }
             })
             remote.setConnectionStateChangeListener { state ->
-                if (state == SpenRemote.State.DISCONNECTED ||
-                    state == SpenRemote.State.DISCONNECTED_BY_UNKNOWN_REASON
-                ) {
+                if (state == SpenRemote.State.DISCONNECTED || state == SpenRemote.State.DISCONNECTED_BY_UNKNOWN_REASON) {
                     _status.value = SpenStatus.DISCONNECTED
                     connectionListener?.invoke(SpenStatus.DISCONNECTED)
                 }
@@ -105,51 +95,49 @@ class SpenHub(private val appContext: Context) {
         val mgr = unitManager ?: return
         try {
             val button = mgr.getUnit(SpenUnit.TYPE_BUTTON)
-            mgr.registerSpenEventListener(buttonListenerImpl, button)
-        } catch (t: Throwable) {
-            Log.e(TAG, "button listener", t)
-        }
+            if (button != null) mgr.registerSpenEventListener(buttonListenerImpl, button)
+        } catch (t: Throwable) { Log.e(TAG, "button listener", t) }
         try {
             val motion = mgr.getUnit(SpenUnit.TYPE_AIR_MOTION)
-            mgr.registerSpenEventListener(motionListenerImpl, motion)
-        } catch (t: Throwable) {
-            Log.e(TAG, "motion listener", t)
-        }
+            if (motion != null) mgr.registerSpenEventListener(motionListenerImpl, motion)
+        } catch (t: Throwable) { Log.e(TAG, "motion listener", t) }
     }
 
     fun unregisterMotion() {
         try {
             val mgr = unitManager ?: return
-            val motion = mgr.getUnit(SpenUnit.TYPE_AIR_MOTION)
+            val motion = mgr.getUnit(SpenUnit.TYPE_AIR_MOTION) ?: return
             mgr.unregisterSpenEventListener(motion)
-        } catch (_: Throwable) {
-        }
+        } catch (_: Throwable) {}
     }
 
     private fun unregister() {
         try {
             val mgr = unitManager ?: return
-            mgr.unregisterSpenEventListener(mgr.getUnit(SpenUnit.TYPE_BUTTON))
-            mgr.unregisterSpenEventListener(mgr.getUnit(SpenUnit.TYPE_AIR_MOTION))
-        } catch (_: Throwable) {
-        }
+            mgr.getUnit(SpenUnit.TYPE_BUTTON)?.let { mgr.unregisterSpenEventListener(it) }
+            mgr.getUnit(SpenUnit.TYPE_AIR_MOTION)?.let { mgr.unregisterSpenEventListener(it) }
+        } catch (_: Throwable) {}
     }
 
     private val buttonListenerImpl = SpenEventListener { ev ->
-        val be = ButtonEvent(ev)
-        val down = be.action == ButtonEvent.ACTION_DOWN
-        _buttonDown.value = down
-        buttonListener?.invoke(PenButton(down, be.timeStamp))
+        try {
+            val be = ButtonEvent(ev)
+            val down = be.action == ButtonEvent.ACTION_DOWN
+            _buttonDown.value = down
+            buttonListener?.invoke(PenButton(down, be.timeStamp))
+        } catch (t: Throwable) { Log.e(TAG, "button event", t) }
     }
 
     private val motionListenerImpl = SpenEventListener { ev ->
-        val me = AirMotionEvent(ev)
-        var dx = me.deltaX
-        var dy = me.deltaY
-        if (settings.invertMotionX) dx = -dx
-        if (settings.invertMotionY) dy = -dy
-        if (kotlin.math.abs(dx) < settings.deadZone && kotlin.math.abs(dy) < settings.deadZone) return@SpenEventListener
-        motionListener?.invoke(PenMotion(dx, dy, me.timeStamp))
+        try {
+            val me = AirMotionEvent(ev)
+            var dx = me.deltaX
+            var dy = me.deltaY
+            if (settings.invertMotionX) dx = -dx
+            if (settings.invertMotionY) dy = -dy
+            if (kotlin.math.abs(dx) < settings.deadZone && kotlin.math.abs(dy) < settings.deadZone) return@SpenEventListener
+            motionListener?.invoke(PenMotion(dx, dy, me.timeStamp))
+        } catch (t: Throwable) { Log.e(TAG, "motion event", t) }
     }
 
     fun injectDemoMotion(dx: Float, dy: Float) {
@@ -163,20 +151,12 @@ class SpenHub(private val appContext: Context) {
 
     companion object {
         private const val TAG = "SpenHub"
-
         fun isDeviceSupported(): Boolean = try {
             val remote = SpenRemote.getInstance()
-            remote.isFeatureEnabled(SpenRemote.FEATURE_TYPE_BUTTON) ||
-                remote.isFeatureEnabled(SpenRemote.FEATURE_TYPE_AIR_MOTION)
+            remote.isFeatureEnabled(SpenRemote.FEATURE_TYPE_BUTTON) || remote.isFeatureEnabled(SpenRemote.FEATURE_TYPE_AIR_MOTION)
         } catch (t: Throwable) {
             Log.w(TAG, "support check failed (expected on non-Samsung)", t)
             false
-        }
-
-        fun errorName(code: Int): String = when (code) {
-            SpenRemote.Error.UNSUPPORTED_DEVICE -> "Unsupported device"
-            SpenRemote.Error.CONNECTION_FAILED -> "Connection failed"
-            else -> "Unknown error"
         }
     }
 }
