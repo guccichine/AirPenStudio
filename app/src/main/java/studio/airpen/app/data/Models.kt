@@ -1,0 +1,182 @@
+package studio.airpen.app.data
+
+enum class AppMode {
+    GESTURE, MOUSE, TYPE, SCROLL, POINTER, MEDIA, CAMERA,
+}
+
+enum class GestureId(val label: String, val symbol: String, val category: GestureCategory) {
+    FLICK_UP("Flick up", "↑", GestureCategory.DIRECTION),
+    FLICK_DOWN("Flick down", "↓", GestureCategory.DIRECTION),
+    FLICK_LEFT("Flick left", "←", GestureCategory.DIRECTION),
+    FLICK_RIGHT("Flick right", "→", GestureCategory.DIRECTION),
+    FLICK_UP_LEFT("Flick up-left", "↖", GestureCategory.DIRECTION),
+    FLICK_UP_RIGHT("Flick up-right", "↗", GestureCategory.DIRECTION),
+    FLICK_DOWN_LEFT("Flick down-left", "↙", GestureCategory.DIRECTION),
+    FLICK_DOWN_RIGHT("Flick down-right", "↘", GestureCategory.DIRECTION),
+    CIRCLE_CW("Circle clockwise", "↻", GestureCategory.SHAPE),
+    CIRCLE_CCW("Circle counter-clockwise", "↺", GestureCategory.SHAPE),
+    SQUARE("Square", "▢", GestureCategory.SHAPE),
+    TRIANGLE("Triangle", "△", GestureCategory.SHAPE),
+    ZIGZAG("Zigzag", "↯", GestureCategory.SHAPE),
+    CHECK("Check mark", "✓", GestureCategory.SHAPE),
+    CROSS("Cross / X", "✕", GestureCategory.SHAPE),
+    PLUS("Plus", "+", GestureCategory.SHAPE),
+    HEART("Heart", "♥", GestureCategory.SHAPE),
+    INFINITY("Infinity / figure-8", "∞", GestureCategory.SHAPE),
+    ARROW("Arrow", "➤", GestureCategory.SHAPE),
+    CARET("Caret / chevron", "^", GestureCategory.SHAPE),
+    STAR("Star", "★", GestureCategory.SHAPE),
+    SPIRAL("Spiral", "@", GestureCategory.SHAPE),
+    PIGTAIL("Pigtail", "§", GestureCategory.SHAPE),
+    BRACKET_LEFT("Left bracket", "[", GestureCategory.SHAPE),
+    BRACKET_RIGHT("Right bracket", "]", GestureCategory.SHAPE),
+    BUTTON_CLICK("Button click", "●", GestureCategory.BUTTON),
+    BUTTON_DOUBLE("Button double-click", "●●", GestureCategory.BUTTON),
+    BUTTON_TRIPLE("Button triple-click", "●●●", GestureCategory.BUTTON),
+    BUTTON_LONG("Button long-press", "▬", GestureCategory.BUTTON),
+}
+
+enum class GestureCategory { DIRECTION, SHAPE, BUTTON }
+
+enum class ActionId(val label: String, val group: ActionGroup, val needsArg: ArgKind = ArgKind.NONE) {
+    NONE("Do nothing", ActionGroup.SYSTEM),
+    BACK("Back", ActionGroup.NAVIGATION),
+    HOME("Home", ActionGroup.NAVIGATION),
+    RECENTS("Recents / overview", ActionGroup.NAVIGATION),
+    NOTIFICATIONS("Notification shade", ActionGroup.NAVIGATION),
+    QUICK_SETTINGS("Quick settings", ActionGroup.NAVIGATION),
+    SPLIT_SCREEN("Split screen", ActionGroup.NAVIGATION),
+    SCREENSHOT("Screenshot", ActionGroup.NAVIGATION),
+    POWER_DIALOG("Power menu", ActionGroup.NAVIGATION),
+    LOCK_SCREEN("Lock screen", ActionGroup.NAVIGATION),
+    OPEN_APP("Open app", ActionGroup.APPS, ArgKind.PACKAGE),
+    OPEN_URL("Open URL", ActionGroup.APPS, ArgKind.TEXT),
+    OPEN_AIRPEN("Open AirPen Studio", ActionGroup.APPS),
+    ASSISTANT("Digital assistant", ActionGroup.APPS),
+    SEARCH("Search", ActionGroup.APPS),
+    PHONE("Phone", ActionGroup.APPS),
+    MESSAGES("Messages", ActionGroup.APPS),
+    CAMERA_APP("Camera app", ActionGroup.APPS),
+    BROWSER("Browser", ActionGroup.APPS),
+    SETTINGS_APP("System settings", ActionGroup.APPS),
+    CALCULATOR("Calculator", ActionGroup.APPS),
+    CALENDAR("Calendar", ActionGroup.APPS),
+    VOLUME_UP("Volume up", ActionGroup.MEDIA),
+    VOLUME_DOWN("Volume down", ActionGroup.MEDIA),
+    VOLUME_MUTE("Toggle mute", ActionGroup.MEDIA),
+    MEDIA_PLAY_PAUSE("Play / pause", ActionGroup.MEDIA),
+    MEDIA_NEXT("Next track", ActionGroup.MEDIA),
+    MEDIA_PREV("Previous track", ActionGroup.MEDIA),
+    MEDIA_STOP("Stop", ActionGroup.MEDIA),
+    MEDIA_FAST_FORWARD("Fast forward", ActionGroup.MEDIA),
+    MEDIA_REWIND("Rewind", ActionGroup.MEDIA),
+    BRIGHTNESS_UP("Brightness up", ActionGroup.MEDIA),
+    BRIGHTNESS_DOWN("Brightness down", ActionGroup.MEDIA),
+    FLASHLIGHT("Toggle flashlight", ActionGroup.MEDIA),
+    DND_TOGGLE("Do not disturb", ActionGroup.MEDIA),
+    ROTATION_TOGGLE("Toggle auto-rotate", ActionGroup.MEDIA),
+    MOUSE_CLICK("Mouse left click", ActionGroup.MOUSE),
+    MOUSE_DOUBLE("Mouse double-click", ActionGroup.MOUSE),
+    MOUSE_RIGHT("Mouse right-click / long-press", ActionGroup.MOUSE),
+    MOUSE_DRAG_TOGGLE("Toggle drag lock", ActionGroup.MOUSE),
+    SCROLL_UP("Scroll up", ActionGroup.MOUSE),
+    SCROLL_DOWN("Scroll down", ActionGroup.MOUSE),
+    SCROLL_LEFT("Scroll left", ActionGroup.MOUSE),
+    SCROLL_RIGHT("Scroll right", ActionGroup.MOUSE),
+    PAGE_UP("Page up", ActionGroup.MOUSE),
+    PAGE_DOWN("Page down", ActionGroup.MOUSE),
+    MODE_GESTURE("Switch to Gesture mode", ActionGroup.MODES),
+    MODE_MOUSE("Switch to Air Mouse", ActionGroup.MODES),
+    MODE_TYPE("Switch to Air Type", ActionGroup.MODES),
+    MODE_SCROLL("Switch to Scroll mode", ActionGroup.MODES),
+    MODE_POINTER("Switch to Pointer mode", ActionGroup.MODES),
+    MODE_MEDIA("Switch to Media remote", ActionGroup.MODES),
+    MODE_CAMERA("Switch to Camera tracking", ActionGroup.MODES),
+    MODE_CYCLE("Cycle modes", ActionGroup.MODES),
+    TYPE_TEXT("Type text snippet", ActionGroup.TYPING, ArgKind.TEXT),
+    TYPE_SPACE("Space", ActionGroup.TYPING),
+    TYPE_BACKSPACE("Backspace", ActionGroup.TYPING),
+    TYPE_ENTER("Enter", ActionGroup.TYPING),
+    TYPE_TAB("Tab", ActionGroup.TYPING),
+    TYPE_SHIFT("Toggle Shift", ActionGroup.TYPING),
+    TYPE_COPY("Copy", ActionGroup.TYPING),
+    TYPE_PASTE("Paste", ActionGroup.TYPING),
+    TYPE_CUT("Cut", ActionGroup.TYPING),
+    TYPE_SELECT_ALL("Select all", ActionGroup.TYPING),
+    TYPE_UNDO("Undo", ActionGroup.TYPING),
+    TYPE_REDO("Redo", ActionGroup.TYPING),
+    TYPE_PERIOD("Period", ActionGroup.TYPING),
+    TYPE_COMMA("Comma", ActionGroup.TYPING),
+    TYPE_QUESTION("Question mark", ActionGroup.TYPING),
+    KEY_COMBO("Keyboard combo", ActionGroup.TYPING, ArgKind.KEYS),
+    SWITCH_PROFILE("Switch profile", ActionGroup.MODES, ArgKind.PROFILE),
+    RUN_MACRO("Run macro", ActionGroup.MODES, ArgKind.MACRO),
+    HUD_TOGGLE("Toggle gesture HUD", ActionGroup.SYSTEM),
+    CURSOR_CENTER("Recenter cursor", ActionGroup.MOUSE),
+    HIDE_CURSOR("Hide cursor", ActionGroup.MOUSE),
+    PRECISION_TOGGLE("Toggle precision mouse", ActionGroup.MOUSE),
+    NOTIFICATION_EXPAND("Open first notification", ActionGroup.NAVIGATION),
+}
+
+enum class ActionGroup { SYSTEM, NAVIGATION, APPS, MEDIA, MOUSE, TYPING, MODES }
+enum class ArgKind { NONE, TEXT, PACKAGE, KEYS, PROFILE, MACRO }
+
+data class BoundAction(val id: ActionId = ActionId.NONE, val arg: String = "")
+data class Profile(val id: String, val name: String, val builtIn: Boolean = false, val map: Map<GestureId, BoundAction> = emptyMap())
+data class MacroStep(val action: BoundAction = BoundAction(), val delayMs: Long = 0)
+data class Macro(val id: String, val name: String, val steps: List<MacroStep> = emptyList(), val repeat: Int = 1)
+data class MouseSettings(val sensitivity: Float = 1.35f, val acceleration: Float = 1.8f, val smoothing: Float = 0.35f, val invertX: Boolean = false, val invertY: Boolean = false, val swapXY: Boolean = false, val cursorSizeDp: Float = 36f, val cursorStyle: String = "crosshair", val hideAfterMs: Long = 4000, val edgeBounce: Boolean = true, val clickOnRelease: Boolean = true, val dragThresholdPx: Float = 24f, val rightClickHoldMs: Long = 550, val scrollGain: Float = 1.4f, val precisionScale: Float = 0.28f, val showTrail: Boolean = true, val alwaysShowCursor: Boolean = false)
+data class TypeSettings(val engine: String = "hybrid", val autoSpace: Boolean = true, val autoCapitalize: Boolean = true, val suggestions: Boolean = true, val minConfidence: Float = 0.55f, val shiftOnFlickUp: Boolean = true, val keyboardScale: Float = 1f, val showGhostStroke: Boolean = true, val vibrateOnChar: Boolean = true)
+data class GestureSettings(val holdToDraw: Boolean = true, val requireButton: Boolean = true, val minStrokeMs: Long = 80, val maxStrokeMs: Long = 4000, val flickStraightness: Float = 0.78f, val minFlickLength: Float = 0.18f, val shapeThreshold: Float = 0.62f, val deadZone: Float = 0.012f, val sampleHz: Int = 90, val invertMotionX: Boolean = false, val invertMotionY: Boolean = false, val showHud: Boolean = true, val hudTimeoutMs: Long = 1200, val haptic: Boolean = true, val sounds: Boolean = true, val batterySaver: Boolean = true, val idleSleepMs: Long = 20_000)
+data class CameraSettings(val enabled: Boolean = false, val useFront: Boolean = true, val gain: Float = 1.6f, val mirror: Boolean = true)
+data class GeneralSettings(val startOnBoot: Boolean = false, val rememberMode: Boolean = true, val lastMode: AppMode = AppMode.GESTURE, val doubleClickMs: Long = 320, val longPressMs: Long = 520, val overlayOpacity: Float = 0.92f, val keepScreenOnWhenActive: Boolean = true, val notifyForeground: Boolean = true)
+data class AppState(val version: Int = 1, val activeProfileId: String = "system", val profiles: List<Profile> = defaultProfiles(), val macros: List<Macro> = defaultMacros(), val appProfileMap: Map<String, String> = emptyMap(), val mouse: MouseSettings = MouseSettings(), val type: TypeSettings = TypeSettings(), val gesture: GestureSettings = GestureSettings(), val camera: CameraSettings = CameraSettings(), val general: GeneralSettings = GeneralSettings())
+
+fun defaultMacros(): List<Macro> = listOf(
+    Macro("macro_goodnight", "Goodnight", listOf(MacroStep(BoundAction(ActionId.VOLUME_MUTE)), MacroStep(BoundAction(ActionId.DND_TOGGLE), 250), MacroStep(BoundAction(ActionId.LOCK_SCREEN), 400))),
+    Macro("macro_capture", "Capture + share", listOf(MacroStep(BoundAction(ActionId.SCREENSHOT)))),
+)
+
+fun defaultProfiles(): List<Profile> = listOf(
+    Profile("system", "System", true, mapOf(
+        GestureId.FLICK_UP to BoundAction(ActionId.HOME),
+        GestureId.FLICK_DOWN to BoundAction(ActionId.NOTIFICATIONS),
+        GestureId.FLICK_LEFT to BoundAction(ActionId.BACK),
+        GestureId.FLICK_RIGHT to BoundAction(ActionId.RECENTS),
+        GestureId.FLICK_UP_LEFT to BoundAction(ActionId.SPLIT_SCREEN),
+        GestureId.FLICK_UP_RIGHT to BoundAction(ActionId.SCREENSHOT),
+        GestureId.FLICK_DOWN_LEFT to BoundAction(ActionId.VOLUME_DOWN),
+        GestureId.FLICK_DOWN_RIGHT to BoundAction(ActionId.VOLUME_UP),
+        GestureId.CIRCLE_CW to BoundAction(ActionId.MEDIA_PLAY_PAUSE),
+        GestureId.CIRCLE_CCW to BoundAction(ActionId.MEDIA_PREV),
+        GestureId.SQUARE to BoundAction(ActionId.SCREENSHOT),
+        GestureId.TRIANGLE to BoundAction(ActionId.ASSISTANT),
+        GestureId.ZIGZAG to BoundAction(ActionId.FLASHLIGHT),
+        GestureId.CHECK to BoundAction(ActionId.TYPE_ENTER),
+        GestureId.CROSS to BoundAction(ActionId.BACK),
+        GestureId.PLUS to BoundAction(ActionId.QUICK_SETTINGS),
+        GestureId.HEART to BoundAction(ActionId.TYPE_TEXT, "❤️"),
+        GestureId.INFINITY to BoundAction(ActionId.MODE_CYCLE),
+        GestureId.BUTTON_CLICK to BoundAction(ActionId.MOUSE_CLICK),
+        GestureId.BUTTON_DOUBLE to BoundAction(ActionId.MODE_MOUSE),
+        GestureId.BUTTON_TRIPLE to BoundAction(ActionId.MODE_TYPE),
+        GestureId.BUTTON_LONG to BoundAction(ActionId.MODE_GESTURE),
+    )),
+    Profile("media", "Media", true, mapOf(
+        GestureId.FLICK_UP to BoundAction(ActionId.VOLUME_UP),
+        GestureId.FLICK_DOWN to BoundAction(ActionId.VOLUME_DOWN),
+        GestureId.FLICK_LEFT to BoundAction(ActionId.MEDIA_PREV),
+        GestureId.FLICK_RIGHT to BoundAction(ActionId.MEDIA_NEXT),
+        GestureId.CIRCLE_CW to BoundAction(ActionId.MEDIA_PLAY_PAUSE),
+        GestureId.BUTTON_CLICK to BoundAction(ActionId.MEDIA_PLAY_PAUSE),
+    )),
+    Profile("typing", "Typing", true, mapOf(
+        GestureId.FLICK_LEFT to BoundAction(ActionId.TYPE_BACKSPACE),
+        GestureId.FLICK_RIGHT to BoundAction(ActionId.TYPE_SPACE),
+        GestureId.FLICK_DOWN to BoundAction(ActionId.TYPE_ENTER),
+        GestureId.FLICK_UP to BoundAction(ActionId.TYPE_SHIFT),
+        GestureId.CIRCLE_CW to BoundAction(ActionId.TYPE_UNDO),
+        GestureId.CHECK to BoundAction(ActionId.TYPE_ENTER),
+        GestureId.CROSS to BoundAction(ActionId.TYPE_BACKSPACE),
+    )),
+)
