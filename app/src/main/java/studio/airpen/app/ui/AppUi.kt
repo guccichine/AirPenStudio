@@ -110,10 +110,21 @@ private fun HomeScreen(activity: MainActivity) {
         PermRow("Display over other apps (cursor + HUD)", overlay) { activity.openOverlaySettings() }
         PermRow("Write settings (brightness)", Settings.System.canWrite(activity)) { activity.openWriteSettings() }
         PermRow("Air Type keyboard (optional IME)", false) { activity.openImeSettings() }
-        Text("Samsung Settings → Advanced features → S Pen → Air actions: turn Air actions OFF for other apps. Pull the S Pen out, hold the side button and draw.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
+        Text("This build does not connect the S Pen until you tap Connect. That is what was crashing on S22 Ultra.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
+        Button(onClick = { activity.requestConnect() }, modifier = Modifier.fillMaxWidth()) { Text("Connect S Pen") }
+        Text("Samsung Settings → Advanced features → S Pen → Air actions: turn Air actions OFF for other apps. Pull the S Pen out, tap Connect, hold the side button and draw.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
+        val crash = remember { studio.airpen.app.CrashLog.read(activity) }
+        if (!crash.isNullOrBlank()) {
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF3A1A1A))) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Last crash (screenshot this if it still closes)", fontWeight = FontWeight.Medium, color = Color(0xFFFF8A8A))
+                    Text(crash.take(4000), fontSize = 11.sp)
+                    OutlinedButton(onClick = { studio.airpen.app.CrashLog.clear(activity) }) { Text("Dismiss") }
+                }
+            }
+        }
         Text("Practice pad", fontWeight = FontWeight.Medium)
         PracticePad()
-        Button(onClick = { AirPen.hub.connect(); AirPen.engine.start() }, modifier = Modifier.fillMaxWidth()) { Text("Reconnect S Pen") }
     }
 }
 
