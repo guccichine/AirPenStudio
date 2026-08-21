@@ -1,8 +1,7 @@
 package studio.airpen.app.service
 
 import android.accessibilityservice.AccessibilityService
-import android.content.Intent
-import android.os.Build
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import studio.airpen.app.AirPen
 
@@ -11,18 +10,25 @@ class AirPenAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
-        AirPen.ensure(applicationContext)
-        AirPen.engine.start()
-        val fg = Intent(this, AirPenForegroundService::class.java)
-        if (Build.VERSION.SDK_INT >= 26) startForegroundService(fg) else startService(fg)
+        try {
+            AirPen.ensure(applicationContext)
+            if (AirPen.isReady) AirPen.engine.start()
+        } catch (t: Throwable) {
+            Log.e("AirPenA11y", "onServiceConnected", t)
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (!AirPen.isReady) return
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
-        val mapped = AirPen.store.current.appProfileMap[pkg] ?: return
-        if (mapped != AirPen.store.current.activeProfileId) {
-            AirPen.store.update { it.copy(activeProfileId = mapped) }
+        try {
+            val mapped = AirPen.store.current.appProfileMap[pkg] ?: return
+            if (mapped != AirPen.store.current.activeProfileId) {
+                AirPen.store.update { it.copy(activeProfileId = mapped) }
+            }
+        } catch (t: Throwable) {
+            Log.e("AirPenA11y", "event", t)
         }
     }
 
@@ -34,10 +40,8 @@ class AirPenAccessibilityService : AccessibilityService() {
     }
 
     companion object {
-        @Volatile
-        var instance: AirPenAccessibilityService? = null
+        @Volatile var instance: AirPenAccessibilityService? = null
             private set
-
         fun isEnabled(): Boolean = instance != null
     }
 }
