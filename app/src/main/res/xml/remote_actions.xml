@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<remote-actions version="1.2" actionset_label="@string/app_name">
+    <action id="air_mouse" label="@string/action_mouse" priority="1" trigger_key="PAGE_UP">
+        <preference name="gesture" value="click" />
+        <preference name="button_only" value="true" />
+    </action>
+    <action id="air_gestures" label="@string/action_gestures" priority="2" trigger_key="PAGE_DOWN">
+        <preference name="gesture" value="double_click" />
+        <preference name="button_only" value="true" />
+    </action>
+    <action id="play" label="@string/action_play" priority="3" trigger_key="MEDIA_PLAY_PAUSE">
+        <preference name="gesture" value="circle_cw" />
+        <preference name="motion_only" value="true" />
+    </action>
+    <action id="next" label="@string/action_next" priority="4" trigger_key="MEDIA_NEXT">
+        <preference name="gesture" value="swipe_right" />
+        <preference name="motion_only" value="true" />
+    </action>
+    <action id="prev" label="@string/action_prev" priority="5" trigger_key="MEDIA_PREVIOUS">
+        <preference name="gesture" value="swipe_left" />
+        <preference name="motion_only" value="true" />
+    </action>
+    <action id="vol_up" label="@string/action_vol_up" priority="6" trigger_key="VOLUME_UP">
+        <preference name="gesture" value="swipe_up" />
+        <preference name="motion_only" value="true" />
+    </action>
+    <action id="vol_down" label="@string/action_vol_down" priority="7" trigger_key="VOLUME_DOWN">
+        <preference name="gesture" value="swipe_down" />
+        <preference name="motion_only" value="true" />
+    </action>
+    <action id="home" label="@string/action_home" priority="8" trigger_key="HOME">
+        <preference name="gesture" value="circle_ccw" />
+        <preference name="motion_only" value="true" />
+    </action>
+    <action id="type_mode" label="@string/action_type" priority="9" trigger_key="N">
+        <preference name="button_only" value="false" />
+    </action>
+    <action id="shot" label="@string/action_shot" priority="10" trigger_key="SYSRQ" />
+</remote-actions>
