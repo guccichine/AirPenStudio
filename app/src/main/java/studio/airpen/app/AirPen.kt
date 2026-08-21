@@ -1,6 +1,7 @@
 package studio.airpen.app
 
 import android.content.Context
+import android.util.Log
 import studio.airpen.app.action.ActionExecutor
 import studio.airpen.app.data.AppStore
 import studio.airpen.app.engine.AirPenEngine
@@ -19,16 +20,22 @@ object AirPen {
     @Volatile
     private var ready = false
 
+    val isReady: Boolean get() = ready
+
     fun ensure(context: Context) {
         if (ready) return
         synchronized(this) {
             if (ready) return
             val app = context.applicationContext
             store = AppStore(app)
-            hub = SpenHub(app)
-            executor = ActionExecutor(app)
-            engine = AirPenEngine(app, store, hub, executor)
-            ready = true
+            try {
+                hub = SpenHub(app)
+                executor = ActionExecutor(app)
+                engine = AirPenEngine(app, store, hub, executor)
+                ready = true
+            } catch (t: Throwable) {
+                Log.e("AirPen", "init failed", t)
+            }
         }
     }
 }
@@ -36,6 +43,8 @@ object AirPen {
 class AirPenApp : android.app.Application() {
     override fun onCreate() {
         super.onCreate()
-        AirPen.ensure(this)
+        runCatching { AirPen.ensure(this) }.onFailure {
+            Log.e("AirPen", "Application init failed — UI will still try to start", it)
+        }
     }
 }

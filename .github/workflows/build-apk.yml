@@ -46,16 +46,18 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: AirPen Studio 1.0.0
+          tag_name: v1.0.1
+          name: AirPen Studio 1.0.1
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            Sideload this on a Galaxy S22 Ultra (or any BLE S Pen device).
+            Crash-fix build for S22 Ultra (Android 14 foreground service).
+
+            Uninstall the old AirPen Studio first, then install this APK.
 
             1. Download **AirPenStudio.apk** below.
-            2. Open the file and install. Allow "Install unknown apps" for Chrome/Files if asked.
-            3. Open **AirPen Studio**.
-            4. Turn on **Accessibility** for AirPen, and **Display over other apps**.
-            5. Samsung Settings → Advanced features → S Pen → Air actions: turn other apps off so they don't steal the button.
-            6. Pull the S Pen out, wait for CONNECTED, then pick Gesture / Mouse / Type.
+            2. Open the file and install.
+            3. Open **AirPen Studio** — it should stay open now.
+            4. Turn on **Accessibility** and **Appear on top**.
+            5. Samsung Settings → S Pen → Air actions: turn other apps off.
+            6. Pull the S Pen out, wait for CONNECTED.
