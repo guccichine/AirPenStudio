@@ -1,0 +1,4 @@
+-keep class com.samsung.android.sdk.** { *; }
+-keep class com.samsung.android.sdk.penremote.** { *; }
+-keep interface com.samsung.android.sdk.penremote.** { *; }
+-dontwarn com.samsung.android.sdk.**

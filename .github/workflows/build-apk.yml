@@ -1,0 +1,61 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Fetch S Pen SDK
+        run: |
+          mkdir -p app/libs
+          curl -fsSL -o app/libs/spenremote-v1.0.1.jar https://raw.githubusercontent.com/jojczak/PenMouseS/main/libs/spenremote-v1.0.1.jar
+          curl -fsSL -o app/libs/sdk-v1.0.0.jar https://raw.githubusercontent.com/jojczak/PenMouseS/main/libs/sdk-v1.0.0.jar
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/AirPenStudio.apk
+          ls -lh dist/AirPenStudio.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AirPenStudio
+          path: dist/AirPenStudio.apk
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: AirPen Studio 1.0.0
+          files: dist/AirPenStudio.apk
+          fail_on_unmatched_files: true
+          body: |
+            Sideload this on a Galaxy S22 Ultra (or any BLE S Pen device).
+
+            1. Download **AirPenStudio.apk** below.
+            2. Open the file and install. Allow "Install unknown apps" for Chrome/Files if asked.
+            3. Open **AirPen Studio**.
+            4. Turn on **Accessibility** for AirPen, and **Display over other apps**.
+            5. Samsung Settings → Advanced features → S Pen → Air actions: turn other apps off so they don't steal the button.
+            6. Pull the S Pen out, wait for CONNECTED, then pick Gesture / Mouse / Type.
