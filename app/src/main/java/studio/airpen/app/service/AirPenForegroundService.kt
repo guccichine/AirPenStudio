@@ -34,7 +34,7 @@ class AirPenForegroundService : Service() {
                 ACTION_TYPE -> runCatching { AirPen.engine.setMode(AppMode.TYPE) }
                 ACTION_STOP -> {
                     runCatching { AirPen.engine.stop() }
-                    ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+                    runCatching { ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE) }
                     stopSelf()
                     return START_NOT_STICKY
                 }
@@ -46,18 +46,67 @@ class AirPenForegroundService : Service() {
     }
 
     private fun goForeground(text: String) {
-        try {
-            val type = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
-            ServiceCompat.startForeground(this, 42, buildNotification(text), type)
+        val notification = try {
+            buildNotification(text)
         } catch (t: Throwable) {
-            Log.e(TAG, "startForeground failed", t)
+            Log.e(TAG, "notification", t)
+            fallbackNotification()
+        }
+        if (Build.VERSION.SDK_INT >= 34) {
+            val types = intArrayOf(
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+                0,
+            )
+            var started = false
+            for (type in types) {
+                try {
+                    if (type == 0) {
+                        @Suppress("DEPRECATION")
+                        startForeground(42, notification)
+                    } else {
+                        ServiceCompat.startForeground(this, 42, notification, type)
+                    }
+                    started = true
+                    break
+                } catch (t: Throwable) {
+                    Log.e(TAG, "startForeground type=$type", t)
+                }
+            }
+            if (!started) {
+                Log.e(TAG, "could not enter foreground — stopping service so the app is not killed")
+                stopSelf()
+            }
+        } else {
+            try {
+                startForeground(42, notification)
+            } catch (t: Throwable) {
+                Log.e(TAG, "startForeground", t)
+                stopSelf()
+            }
         }
     }
 
+    private fun fallbackNotification(): Notification {
+        return NotificationCompat.Builder(this, CHANNEL)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("AirPen Studio")
+            .setContentText("Running")
+            .setOngoing(true)
+            .build()
+    }
+
     private fun buildNotification(text: String): Notification {
-        val open = PendingIntent.getActivity(this, 1, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val open = PendingIntent.getActivity(
+            this, 1,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
         fun action(id: Int, label: String, action: String): NotificationCompat.Action {
-            val pi = PendingIntent.getService(this, id, Intent(this, AirPenForegroundService::class.java).setAction(action), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            val pi = PendingIntent.getService(
+                this, id,
+                Intent(this, AirPenForegroundService::class.java).setAction(action),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
             return NotificationCompat.Action(0, label, pi)
         }
         return NotificationCompat.Builder(this, CHANNEL)
@@ -75,7 +124,10 @@ class AirPenForegroundService : Service() {
 
     private fun ensureChannel() {
         if (Build.VERSION.SDK_INT < 26) return
-        getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL, "AirPen", NotificationManager.IMPORTANCE_LOW))
+        val mgr = getSystemService(NotificationManager::class.java)
+        mgr.createNotificationChannel(
+            NotificationChannel(CHANNEL, "AirPen", NotificationManager.IMPORTANCE_LOW),
+        )
     }
 
     companion object {
