@@ -27,14 +27,16 @@ object AirPen {
         synchronized(this) {
             if (ready) return
             val app = context.applicationContext
-            store = AppStore(app)
             try {
+                store = AppStore(app)
                 hub = SpenHub(app)
                 executor = ActionExecutor(app)
                 engine = AirPenEngine(app, store, hub, executor)
+                engine.start(connectPen = false)
                 ready = true
             } catch (t: Throwable) {
                 Log.e("AirPen", "init failed", t)
+                CrashLog.write(app, t)
             }
         }
     }
@@ -43,8 +45,9 @@ object AirPen {
 class AirPenApp : android.app.Application() {
     override fun onCreate() {
         super.onCreate()
-        runCatching { AirPen.ensure(this) }.onFailure {
-            Log.e("AirPen", "Application init failed — UI will still try to start", it)
-        }
+        CrashLog.install(this)
+        // Do not touch the S Pen SDK or start a foreground service here.
+        // Loading Samsung classes / FGS at process start is what killed the
+        // previous builds on Galaxy S22 Ultra (One UI).
     }
 }

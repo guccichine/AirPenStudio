@@ -11,8 +11,9 @@ class AirPenAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
         try {
+            // Wire the engine but do NOT connect the S Pen SDK from here.
+            // Connecting from an accessibility process start is a common crash on One UI.
             AirPen.ensure(applicationContext)
-            if (AirPen.isReady) AirPen.engine.start()
         } catch (t: Throwable) {
             Log.e("AirPenA11y", "onServiceConnected", t)
         }
@@ -40,8 +41,10 @@ class AirPenAccessibilityService : AccessibilityService() {
     }
 
     companion object {
-        @Volatile var instance: AirPenAccessibilityService? = null
+        @Volatile
+        var instance: AirPenAccessibilityService? = null
             private set
+
         fun isEnabled(): Boolean = instance != null
     }
 }
