@@ -36,7 +36,7 @@ class AirImeService : InputMethodService() {
         chip("⌫") { currentInputConnection?.deleteSurroundingText(1, 0) }
         chip("space") { currentInputConnection?.commitText(" ", 1) }
         chip("⏎") { currentInputConnection?.performEditorAction(EditorInfo.IME_ACTION_DONE) }
-        chip("Mouse") { AirPen.engine.setMode(AppMode.MOUSE) }
+        chip("Mouse") { if (AirPen.isReady) AirPen.engine.setMode(AppMode.MOUSE) }
         root.addView(row)
         val hint = TextView(this).apply {
             text = "Flicks: ← backspace  → space  ↓ enter  ↑ shift\nShapes: circle = undo   check = enter   X = backspace"
@@ -45,16 +45,23 @@ class AirImeService : InputMethodService() {
             setPadding(0, (8 * density).toInt(), 0, 0)
         }
         root.addView(hint)
-        AirPen.ensure(applicationContext)
-        AirPen.engine.setMode(AppMode.TYPE)
-        AirPen.engine.executor.textInjector = { text ->
-            currentInputConnection?.commitText(text, 1)
+        try {
+            AirPen.ensure(applicationContext)
+            if (AirPen.isReady) {
+                AirPen.engine.setMode(AppMode.TYPE)
+                AirPen.engine.executor.textInjector = { text ->
+                    currentInputConnection?.commitText(text, 1)
+                }
+            }
+        } catch (_: Throwable) {
         }
         return root
     }
 
     override fun onFinishInput() {
         super.onFinishInput()
-        AirPen.engine.executor.textInjector = null
+        if (AirPen.isReady) {
+            AirPen.engine.executor.textInjector = null
+        }
     }
 }
