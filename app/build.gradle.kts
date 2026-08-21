@@ -56,26 +56,6 @@ android {
     }
 }
 
-val spenLibs = mapOf(
-    "spenremote-v1.0.1.jar" to "https://raw.githubusercontent.com/jojczak/PenMouseS/main/libs/spenremote-v1.0.1.jar",
-    "sdk-v1.0.0.jar" to "https://raw.githubusercontent.com/jojczak/PenMouseS/main/libs/sdk-v1.0.0.jar",
-)
-val libsDir = file("libs")
-tasks.register("fetchSpenSdk") {
-    doLast {
-        libsDir.mkdirs()
-        spenLibs.forEach { (name, url) ->
-            val dest = File(libsDir, name)
-            if (!dest.exists() || dest.length() < 100) {
-                dest.outputStream().use { out ->
-                    java.net.URI(url).toURL().openStream().use { input -> input.copyTo(out) }
-                }
-            }
-        }
-    }
-}
-tasks.matching { it.name == "preBuild" }.configureEach { dependsOn("fetchSpenSdk") }
-
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 
