@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         if (!AirPen.isReady) return
         try {
+            AirPen.hub.attachActivity(this)
             val mode = AirPen.engine.mode
             if (mode == studio.airpen.app.data.AppMode.MOUSE ||
                 mode == studio.airpen.app.data.AppMode.POINTER ||
@@ -74,6 +75,28 @@ class MainActivity : ComponentActivity() {
         } catch (t: Throwable) {
             Log.e(TAG, "onResume", t)
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (!AirPen.isReady) return
+        try {
+            // Hand the S Pen SDK an Application context so leaving the UI
+            // does not tear the BLE session down with the activity.
+            AirPen.hub.attachActivity(applicationContext)
+            if (AirPen.store.current.general.runInBackground) {
+                AirPenBackground.start(this)
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "onStop", t)
+        }
+    }
+
+    override fun onDestroy() {
+        if (AirPen.isReady) {
+            runCatching { AirPen.hub.attachActivity(applicationContext) }
+        }
+        super.onDestroy()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -106,6 +129,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Called from the Home screen. Does not run at launch. */
     fun requestConnect() {
         val needed = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= 31) needed += Manifest.permission.BLUETOOTH_CONNECT
