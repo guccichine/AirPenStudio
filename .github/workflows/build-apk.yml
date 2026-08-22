@@ -46,12 +46,12 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.5
-          name: AirPen Studio 1.0.5
+          tag_name: v1.0.6
+          name: AirPen Studio 1.0.6
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            Save button after mapping gestures, and the app keeps working in the background after you leave it.
+            Flick up / flick down now scroll the screen — in Chrome, feeds, Settings, anywhere Accessibility can swipe.
 
             **Uninstall any older AirPen Studio first**, then install this APK.
 
@@ -59,7 +59,7 @@ jobs:
             2. Open AirPen Studio. Enable **Accessibility** and **Display over other apps**.
             3. Tap **Connect S Pen**. You should see a persistent **Running in background** notification.
             4. Tap **Allow background battery** (Samsung: Apps → AirPen Studio → Battery → Unrestricted).
-            5. Gestures tab: tap a flick, pick an action, tap **Save**.
-            6. Leave the app — flicks and air-mouse should still work.
+            5. Hold the S Pen side button and **flick up** to scroll up, **flick down** to scroll down.
+            6. Gestures tab: remap any flick if you want Home / notifications back.
 
-            If it still closes, reopen it — the Home screen will show a **Last crash** dump. Screenshot that.
+            Existing installs keep custom mappings. If flick up was still Home, this update remaps it to scroll.

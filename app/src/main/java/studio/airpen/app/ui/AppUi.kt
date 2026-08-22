@@ -98,7 +98,7 @@ private fun HomeScreen(activity: MainActivity) {
                     Spacer(Modifier.width(8.dp))
                     Text("$status  ·  $live")
                 }
-                Text(last.gesture?.let { "${it.symbol} ${it.label}  ${(last.score * 100).toInt()}%" } ?: last.letter?.let { "Letter $it  ${(last.score * 100).toInt()}%" } ?: "Draw a gesture to test recognition", color = Gold)
+                Text(last.gesture?.let { "${it.symbol} ${it.label}  ${(last.score * 100).toInt()}%" } ?: last.letter?.let { "Letter $it  ${(last.score * 100).toInt()}%" } ?: "Flick ↑ / ↓ to scroll the screen · draw a gesture to test", color = Gold)
             }
         }
         Text("Mode", fontWeight = FontWeight.Medium)
@@ -116,7 +116,7 @@ private fun HomeScreen(activity: MainActivity) {
         Button(onClick = { if (bg) activity.stopBackground() else activity.startBackground() }, modifier = Modifier.fillMaxWidth()) { Text(if (bg) "Background ON — tap to stop" else "Work in background") }
         OutlinedButton(onClick = { activity.openBatterySettings() }, modifier = Modifier.fillMaxWidth()) { Text("Allow background battery") }
         Text("Connect starts a persistent notification so gestures keep working after you leave this screen. Unrestrict battery for AirPen Studio on Samsung.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
-        Text("Samsung Settings → Advanced features → S Pen → Air actions: turn Air actions OFF for other apps. Pull the S Pen out, tap Connect, hold the side button and draw.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
+        Text("Samsung Settings → Advanced features → S Pen → Air actions: turn Air actions OFF for other apps. Pull the S Pen out, tap Connect, hold the side button and flick up or down to scroll any screen.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
         val crash = remember { studio.airpen.app.CrashLog.read(activity) }
         if (!crash.isNullOrBlank()) {
             Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF3A1A1A))) {
@@ -309,6 +309,7 @@ private fun AboutPage() {
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("AirPen Studio", style = MaterialTheme.typography.headlineMedium)
         Text("S Pen customisation for air gestures, distant air-mouse, and air typing.")
+        Text("Flick up scrolls the screen up. Flick down scrolls the screen down. Remap any gesture in the Gestures tab.")
         Text("On S22 Ultra: enable Accessibility + Appear on top, disable Samsung Air actions for other apps, pull the S Pen out.")
     }
 }

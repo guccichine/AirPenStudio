@@ -105,12 +105,12 @@ class ActionExecutor(private val appContext: Context) {
             ActionId.MOUSE_DOUBLE -> clickDispatcher?.invoke(ClickKind.DOUBLE)
             ActionId.MOUSE_RIGHT -> clickDispatcher?.invoke(ClickKind.RIGHT)
             ActionId.MOUSE_DRAG_TOGGLE -> clickDispatcher?.invoke(ClickKind.DRAG_TOGGLE)
-            ActionId.SCROLL_UP -> scrollDispatcher?.invoke(0f, -1f)
-            ActionId.SCROLL_DOWN -> scrollDispatcher?.invoke(0f, 1f)
-            ActionId.SCROLL_LEFT -> scrollDispatcher?.invoke(-1f, 0f)
-            ActionId.SCROLL_RIGHT -> scrollDispatcher?.invoke(1f, 0f)
-            ActionId.PAGE_UP -> scrollDispatcher?.invoke(0f, -3.2f)
-            ActionId.PAGE_DOWN -> scrollDispatcher?.invoke(0f, 3.2f)
+            ActionId.SCROLL_UP -> scrollScreen(0f, -1f)
+            ActionId.SCROLL_DOWN -> scrollScreen(0f, 1f)
+            ActionId.SCROLL_LEFT -> scrollScreen(-1f, 0f)
+            ActionId.SCROLL_RIGHT -> scrollScreen(1f, 0f)
+            ActionId.PAGE_UP -> scrollScreen(0f, -2.2f)
+            ActionId.PAGE_DOWN -> scrollScreen(0f, 2.2f)
             ActionId.MODE_GESTURE -> modeChanger?.invoke(AppMode.GESTURE)
             ActionId.MODE_MOUSE -> modeChanger?.invoke(AppMode.MOUSE)
             ActionId.MODE_TYPE -> modeChanger?.invoke(AppMode.TYPE)
@@ -172,6 +172,59 @@ class ActionExecutor(private val appContext: Context) {
         val svc = AirPenAccessibilityService.instance ?: return
         val path = Path().apply { moveTo(x1, y1); lineTo(x2, y2) }
         svc.dispatchGesture(GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(path, 0, duration)).build(), null, null)
+    }
+
+    /**
+     * Flick-driven scroll. dirY < 0 is flick up (finger swipe up — content moves up).
+     * Centre-screen Accessibility swipe so it works in Chrome, feeds, Settings, any app.
+     */
+    fun scrollScreen(dirX: Float, dirY: Float) {
+        if (AirPenAccessibilityService.instance == null) {
+            toast("Turn on Accessibility so AirPen can scroll")
+            return
+        }
+        swipeScroll(dirX, dirY)
+    }
+
+    private fun swipeScroll(dirX: Float, dirY: Float) {
+        val metrics = appContext.resources.displayMetrics
+        val w = metrics.widthPixels.toFloat()
+        val h = metrics.heightPixels.toFloat()
+        val absX = kotlin.math.abs(dirX)
+        val absY = kotlin.math.abs(dirY)
+        val vertical = absY >= absX
+        val mag = (if (vertical) absY else absX).coerceAtLeast(1f)
+        val span = (if (vertical) h else w) * (0.42f * mag.coerceAtMost(1.6f)).coerceIn(0.32f, 0.68f)
+        val pad = 48f
+        val cx = w / 2f
+        val cy = h * 0.52f
+        val half = span / 2f
+        val x1: Float
+        val y1: Float
+        val x2: Float
+        val y2: Float
+        if (vertical) {
+            x1 = cx
+            x2 = cx
+            if (dirY < 0) {
+                y1 = (cy + half).coerceIn(pad, h - pad)
+                y2 = (cy - half).coerceIn(pad, h - pad)
+            } else {
+                y1 = (cy - half).coerceIn(pad, h - pad)
+                y2 = (cy + half).coerceIn(pad, h - pad)
+            }
+        } else {
+            y1 = cy
+            y2 = cy
+            if (dirX < 0) {
+                x1 = (cx + half).coerceIn(pad, w - pad)
+                x2 = (cx - half).coerceIn(pad, w - pad)
+            } else {
+                x1 = (cx - half).coerceIn(pad, w - pad)
+                x2 = (cx + half).coerceIn(pad, w - pad)
+            }
+        }
+        swipe(x1, y1, x2, y2, 300L)
     }
 
     fun longPressAt(x: Float, y: Float, holdMs: Long = 700L) {

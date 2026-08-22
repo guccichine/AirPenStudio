@@ -153,10 +153,13 @@ class AirMouseController(
     }
 
     fun scroll(dirX: Float, dirY: Float) {
-        val g = settings.scrollGain * 280f
-        val x2 = (x + dirX * g * 0.15f)
-        val y2 = (y + dirY * g)
-        executor.swipe(x, y, x2, y2, 220)
+        val metrics = context.resources.displayMetrics
+        val startX = if (overlayReady && x > 8f) x else metrics.widthPixels / 2f
+        val startY = if (overlayReady && y > 8f) y else metrics.heightPixels * 0.52f
+        val g = settings.scrollGain * 360f
+        val x2 = (startX + dirX * g * 0.15f).coerceIn(24f, metrics.widthPixels - 24f)
+        val y2 = (startY + dirY * g).coerceIn(48f, metrics.heightPixels - 48f)
+        executor.swipe(startX, startY, x2, y2, 240)
         bumpIdle()
     }
 

@@ -130,7 +130,7 @@ data class TypeSettings(val engine: String = "hybrid", val autoSpace: Boolean = 
 data class GestureSettings(val holdToDraw: Boolean = true, val requireButton: Boolean = true, val minStrokeMs: Long = 80, val maxStrokeMs: Long = 4000, val flickStraightness: Float = 0.78f, val minFlickLength: Float = 0.18f, val shapeThreshold: Float = 0.62f, val deadZone: Float = 0.012f, val sampleHz: Int = 90, val invertMotionX: Boolean = false, val invertMotionY: Boolean = false, val showHud: Boolean = true, val hudTimeoutMs: Long = 1200, val haptic: Boolean = true, val sounds: Boolean = true, val batterySaver: Boolean = true, val idleSleepMs: Long = 20_000)
 data class CameraSettings(val enabled: Boolean = false, val useFront: Boolean = true, val gain: Float = 1.6f, val mirror: Boolean = true)
 data class GeneralSettings(val startOnBoot: Boolean = false, val rememberMode: Boolean = true, val lastMode: AppMode = AppMode.GESTURE, val doubleClickMs: Long = 320, val longPressMs: Long = 520, val overlayOpacity: Float = 0.92f, val keepScreenOnWhenActive: Boolean = true, val notifyForeground: Boolean = true, val runInBackground: Boolean = true)
-data class AppState(val version: Int = 1, val activeProfileId: String = "system", val profiles: List<Profile> = defaultProfiles(), val macros: List<Macro> = defaultMacros(), val appProfileMap: Map<String, String> = emptyMap(), val mouse: MouseSettings = MouseSettings(), val type: TypeSettings = TypeSettings(), val gesture: GestureSettings = GestureSettings(), val camera: CameraSettings = CameraSettings(), val general: GeneralSettings = GeneralSettings())
+data class AppState(val version: Int = 3, val activeProfileId: String = "system", val profiles: List<Profile> = defaultProfiles(), val macros: List<Macro> = defaultMacros(), val appProfileMap: Map<String, String> = emptyMap(), val mouse: MouseSettings = MouseSettings(), val type: TypeSettings = TypeSettings(), val gesture: GestureSettings = GestureSettings(), val camera: CameraSettings = CameraSettings(), val general: GeneralSettings = GeneralSettings())
 
 fun defaultMacros(): List<Macro> = listOf(
     Macro("macro_goodnight", "Goodnight", listOf(MacroStep(BoundAction(ActionId.VOLUME_MUTE)), MacroStep(BoundAction(ActionId.DND_TOGGLE), 250), MacroStep(BoundAction(ActionId.LOCK_SCREEN), 400))),
@@ -139,8 +139,8 @@ fun defaultMacros(): List<Macro> = listOf(
 
 fun defaultProfiles(): List<Profile> = listOf(
     Profile("system", "System", true, mapOf(
-        GestureId.FLICK_UP to BoundAction(ActionId.HOME),
-        GestureId.FLICK_DOWN to BoundAction(ActionId.NOTIFICATIONS),
+        GestureId.FLICK_UP to BoundAction(ActionId.SCROLL_UP),
+        GestureId.FLICK_DOWN to BoundAction(ActionId.SCROLL_DOWN),
         GestureId.FLICK_LEFT to BoundAction(ActionId.BACK),
         GestureId.FLICK_RIGHT to BoundAction(ActionId.RECENTS),
         GestureId.FLICK_UP_LEFT to BoundAction(ActionId.SPLIT_SCREEN),
@@ -148,7 +148,7 @@ fun defaultProfiles(): List<Profile> = listOf(
         GestureId.FLICK_DOWN_LEFT to BoundAction(ActionId.VOLUME_DOWN),
         GestureId.FLICK_DOWN_RIGHT to BoundAction(ActionId.VOLUME_UP),
         GestureId.CIRCLE_CW to BoundAction(ActionId.MEDIA_PLAY_PAUSE),
-        GestureId.CIRCLE_CCW to BoundAction(ActionId.MEDIA_PREV),
+        GestureId.CIRCLE_CCW to BoundAction(ActionId.HOME),
         GestureId.SQUARE to BoundAction(ActionId.SCREENSHOT),
         GestureId.TRIANGLE to BoundAction(ActionId.ASSISTANT),
         GestureId.ZIGZAG to BoundAction(ActionId.FLASHLIGHT),
@@ -161,6 +161,15 @@ fun defaultProfiles(): List<Profile> = listOf(
         GestureId.BUTTON_DOUBLE to BoundAction(ActionId.MODE_MOUSE),
         GestureId.BUTTON_TRIPLE to BoundAction(ActionId.MODE_TYPE),
         GestureId.BUTTON_LONG to BoundAction(ActionId.MODE_GESTURE),
+    )),
+    Profile("reading", "Reading", true, mapOf(
+        GestureId.FLICK_UP to BoundAction(ActionId.SCROLL_UP),
+        GestureId.FLICK_DOWN to BoundAction(ActionId.SCROLL_DOWN),
+        GestureId.FLICK_LEFT to BoundAction(ActionId.PAGE_UP),
+        GestureId.FLICK_RIGHT to BoundAction(ActionId.PAGE_DOWN),
+        GestureId.BUTTON_CLICK to BoundAction(ActionId.MOUSE_CLICK),
+        GestureId.BUTTON_DOUBLE to BoundAction(ActionId.BACK),
+        GestureId.BUTTON_LONG to BoundAction(ActionId.HOME),
     )),
     Profile("media", "Media", true, mapOf(
         GestureId.FLICK_UP to BoundAction(ActionId.VOLUME_UP),
