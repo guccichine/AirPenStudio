@@ -17,7 +17,7 @@ Samsung and S Pen are trademarks of Samsung Electronics. This project is not aff
 ## What you can do
 
 - **Gestures:** up, down, left, right, four diagonals, circle (CW/CCW), square, triangle, zigzag, check, X, plus, heart, infinity, arrow, caret, star, spiral, pigtail, brackets.
-- **Flick to scroll:** hold the side button, flick **up** to scroll the screen up, flick **down** to scroll down. Works in any app (Chrome, feeds, Settings) via Accessibility swipe.
+- **Flick to scroll (full page):** hold the side button, flick **up** to scroll the screen up by one full page, flick **down** to scroll down by one full page. Works in any app (Chrome, feeds, Settings) via Accessibility swipe. Page Up / Page Down actions use the same full-page distance.
 - **Button:** click, double-click, triple-click, long-press — each remappable.
 - **Air mouse:** S Pen IMU moves an on-screen cursor (up to ~10 m). Click, double-click, long-press, drag, scroll, precision mode.
 - **Air type:** write letters in the air, or point at a floating QWERTY and click. Flicks: ← backspace, → space, ↓ enter, ↑ shift.
