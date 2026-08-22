@@ -2,15 +2,16 @@ package studio.airpen.app.mouse
 
 import android.content.Context
 import android.graphics.PixelFormat
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
 import android.widget.FrameLayout
 import studio.airpen.app.action.ActionExecutor
 import studio.airpen.app.data.MouseSettings
+import studio.airpen.app.overlay.OverlayWindows
 import kotlin.math.abs
 import kotlin.math.pow
 
@@ -18,10 +19,11 @@ class AirMouseController(
     private val context: Context,
     private val executor: ActionExecutor,
 ) {
-    private val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val main = Handler(Looper.getMainLooper())
     private var overlay: CursorOverlayView? = null
-    private var params: WindowManager.LayoutParams? = null
+    private var handle: OverlayWindows.Handle? = null
+    var overlayReady: Boolean = false
+        private set
 
     var x: Float = 0f
         private set
@@ -47,38 +49,36 @@ class AirMouseController(
         val view = CursorOverlayView(context)
         view.style = settings.cursorStyle
         view.cursorDp = settings.cursorSizeDp
-        val type = if (Build.VERSION.SDK_INT >= 26) {
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
-            type,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT,
         )
         lp.gravity = Gravity.TOP or Gravity.START
-        try {
-            wm.addView(view, lp)
-            overlay = view
-            params = lp
-            view.setCursor(x, y)
-            visible = true
-        } catch (_: Throwable) {
+        val added = OverlayWindows.add(context, view, lp)
+        if (added == null) {
+            Log.e("AirMouse", "cursor overlay failed — enable Display over other apps + Accessibility")
+            overlayReady = false
+            return
         }
+        handle = added
+        overlay = view
+        overlayReady = true
+        view.setCursor(x, y)
+        visible = true
     }
 
     fun detach() {
         main.removeCallbacks(hideRunnable)
-        overlay?.let { runCatching { wm.removeView(it) } }
+        handle?.remove()
+        handle = null
         overlay = null
-        params = null
+        overlayReady = false
         visible = false
     }
 
@@ -169,7 +169,7 @@ class AirMouseController(
 }
 
 class CursorOverlayView(context: Context) : FrameLayout(context) {
-    var cursorDp: Float = 36f
+    var cursorDp: Float = 48f
     var style: String = "crosshair"
     private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
     private var cx = 0f
@@ -231,7 +231,7 @@ class CursorOverlayView(context: Context) : FrameLayout(context) {
             }
             else -> {
                 paint.style = android.graphics.Paint.Style.STROKE
-                paint.strokeWidth = 4f
+                paint.strokeWidth = 6f
                 paint.color = gold
                 canvas.drawCircle(cx, cy, r, paint)
                 canvas.drawLine(cx - r * 1.35f, cy, cx + r * 1.35f, cy, paint)
