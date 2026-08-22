@@ -47,6 +47,10 @@ class AppStore(context: Context) {
         }
     }
 
+    fun saveNow(): Boolean {
+        return persistSync(current)
+    }
+
     fun exportJson(): String = gson.toJson(current)
 
     fun importJson(json: String) {
@@ -77,6 +81,14 @@ class AppStore(context: Context) {
 
     private fun persist(state: AppState) {
         prefs.edit().putString(KEY, gson.toJson(state)).apply()
+    }
+
+    private fun persistSync(state: AppState): Boolean {
+        return try {
+            prefs.edit().putString(KEY, gson.toJson(state)).commit()
+        } catch (_: Throwable) {
+            false
+        }
     }
 
     companion object {

@@ -46,18 +46,17 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.3
-          name: AirPen Studio 1.0.3
+          tag_name: v1.0.4
+          name: AirPen Studio 1.0.4
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            Fixes for Galaxy S22 Ultra: flick directions, on-screen mouse cursor, and air-type letters.
+            Save button for gesture mappings, and AirPen keeps running in the background after you leave the app.
 
             **Uninstall any older AirPen Studio first**, then install this APK.
 
-            1. Download **AirPenStudio.apk** below.
-            2. Open the file and install. Allow "Install unknown apps" for Chrome/Files if asked.
-            3. Open **AirPen Studio**. Turn on **Accessibility** and **Display over other apps** — the cursor needs both.
-            4. Samsung Settings → Advanced features → S Pen → Air actions: turn other apps off.
-            5. Pull the S Pen out, tap **Connect S Pen**, then pick Gesture / Mouse / Type.
-            6. Hold the side button, draw, release. Left flick = backspace, right flick = space when typing.
+            1. Download **AirPenStudio.apk** below and install it.
+            2. Open AirPen Studio. Enable **Accessibility** and **Display over other apps**.
+            3. Tap **Connect S Pen**. A notification means it is running in the background.
+            4. Gestures tab: tap a flick, pick an action, tap **Save**.
+            5. Tap **Allow background battery** so Samsung does not kill it.
