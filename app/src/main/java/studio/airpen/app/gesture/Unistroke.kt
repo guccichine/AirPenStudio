@@ -63,6 +63,27 @@ object Unistroke {
         }
     }
 
+    fun scaleUniform(points: List<Pt>, size: Float = SQUARE): List<Pt> {
+        var minX = Float.POSITIVE_INFINITY
+        var minY = Float.POSITIVE_INFINITY
+        var maxX = Float.NEGATIVE_INFINITY
+        var maxY = Float.NEGATIVE_INFINITY
+        for (p in points) {
+            if (p.x < minX) minX = p.x
+            if (p.y < minY) minY = p.y
+            if (p.x > maxX) maxX = p.x
+            if (p.y > maxY) maxY = p.y
+        }
+        val w = (maxX - minX).coerceAtLeast(1e-3f)
+        val h = (maxY - minY).coerceAtLeast(1e-3f)
+        val scale = size / max(w, h)
+        val ox = (size - w * scale) * 0.5f
+        val oy = (size - h * scale) * 0.5f
+        return points.map { p ->
+            Pt((p.x - minX) * scale + ox, (p.y - minY) * scale + oy, p.t)
+        }
+    }
+
     fun scaleToSquare(points: List<Pt>, size: Float = SQUARE): List<Pt> {
         var minX = Float.POSITIVE_INFINITY
         var minY = Float.POSITIVE_INFINITY
@@ -92,6 +113,11 @@ object Unistroke {
         return translateToOrigin(scaleToSquare(rotated))
     }
 
+    fun normalizeKeepAspect(points: List<Pt>): List<Pt> {
+        val r = resample(points)
+        return translateToOrigin(scaleUniform(r))
+    }
+
     fun recognize(
         points: List<Pt>,
         templates: List<Template>,
@@ -99,6 +125,28 @@ object Unistroke {
     ): Pair<Template, Float>? {
         if (points.size < 5 || templates.isEmpty()) return null
         val candidate = normalize(points)
+        var best: Template? = null
+        var bestDist = Float.POSITIVE_INFINITY
+        for (t in templates) {
+            val d = distanceAtBestAngle(candidate, t.points, -angleRange, angleRange)
+            if (d < bestDist) {
+                bestDist = d
+                best = t
+            }
+        }
+        best ?: return null
+        val score = (1f - bestDist / (0.5f * sqrt((SQUARE * SQUARE * 2).toDouble()).toFloat()))
+            .coerceIn(0f, 1f)
+        return best to score
+    }
+
+    fun recognizeOriented(
+        points: List<Pt>,
+        templates: List<Template>,
+        angleRange: Float = 14f * (PI / 180f).toFloat(),
+    ): Pair<Template, Float>? {
+        if (points.size < 5 || templates.isEmpty()) return null
+        val candidate = normalizeKeepAspect(points)
         var best: Template? = null
         var bestDist = Float.POSITIVE_INFINITY
         for (t in templates) {
@@ -178,6 +226,12 @@ object Unistroke {
         val a = points.first()
         val b = points.last()
         return atan2((b.y - a.y).toDouble(), (b.x - a.x).toDouble()).toFloat()
+    }
+
+    fun finishHeading(points: List<Pt>): Float {
+        if (points.size < 6) return heading(points)
+        val from = (points.size * 0.4f).toInt().coerceIn(1, points.size - 2)
+        return heading(points.subList(from, points.size))
     }
 
     fun windingTurns(points: List<Pt>): Float {
