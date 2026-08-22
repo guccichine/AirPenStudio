@@ -105,12 +105,13 @@ class ActionExecutor(private val appContext: Context) {
             ActionId.MOUSE_DOUBLE -> clickDispatcher?.invoke(ClickKind.DOUBLE)
             ActionId.MOUSE_RIGHT -> clickDispatcher?.invoke(ClickKind.RIGHT)
             ActionId.MOUSE_DRAG_TOGGLE -> clickDispatcher?.invoke(ClickKind.DRAG_TOGGLE)
-            ActionId.SCROLL_UP -> scrollScreen(0f, -1f)
-            ActionId.SCROLL_DOWN -> scrollScreen(0f, 1f)
+            // Full-page scrolls: direction follows the air gesture; distance is ~1 full viewport
+            ActionId.SCROLL_UP -> scrollScreen(0f, -2.5f)
+            ActionId.SCROLL_DOWN -> scrollScreen(0f, 2.5f)
             ActionId.SCROLL_LEFT -> scrollScreen(-1f, 0f)
             ActionId.SCROLL_RIGHT -> scrollScreen(1f, 0f)
-            ActionId.PAGE_UP -> scrollScreen(0f, -2.2f)
-            ActionId.PAGE_DOWN -> scrollScreen(0f, 2.2f)
+            ActionId.PAGE_UP -> scrollScreen(0f, -2.5f)
+            ActionId.PAGE_DOWN -> scrollScreen(0f, 2.5f)
             ActionId.MODE_GESTURE -> modeChanger?.invoke(AppMode.GESTURE)
             ActionId.MODE_MOUSE -> modeChanger?.invoke(AppMode.MOUSE)
             ActionId.MODE_TYPE -> modeChanger?.invoke(AppMode.TYPE)
@@ -177,6 +178,7 @@ class ActionExecutor(private val appContext: Context) {
     /**
      * Flick-driven scroll. dirY < 0 is flick up (finger swipe up — content moves up).
      * Centre-screen Accessibility swipe so it works in Chrome, feeds, Settings, any app.
+     * Magnitude controls distance: ~1.0 = partial, >=2.0 = full-page (up to ~90% of viewport).
      */
     fun scrollScreen(dirX: Float, dirY: Float) {
         if (AirPenAccessibilityService.instance == null) {
@@ -194,7 +196,8 @@ class ActionExecutor(private val appContext: Context) {
         val absY = kotlin.math.abs(dirY)
         val vertical = absY >= absX
         val mag = (if (vertical) absY else absX).coerceAtLeast(1f)
-        val span = (if (vertical) h else w) * (0.42f * mag.coerceAtMost(1.6f)).coerceIn(0.32f, 0.68f)
+        // Higher magnitude now produces near-full-page swipes (up to 90% of screen)
+        val span = (if (vertical) h else w) * (0.40f * mag.coerceAtMost(2.5f)).coerceIn(0.30f, 0.90f)
         val pad = 48f
         val cx = w / 2f
         val cy = h * 0.52f
@@ -224,7 +227,9 @@ class ActionExecutor(private val appContext: Context) {
                 x2 = (cx + half).coerceIn(pad, w - pad)
             }
         }
-        swipe(x1, y1, x2, y2, 300L)
+        // Slightly longer duration for the larger full-page gesture so it feels natural
+        val duration = if (mag >= 2.0f) 380L else 300L
+        swipe(x1, y1, x2, y2, duration)
     }
 
     fun longPressAt(x: Float, y: Float, holdMs: Long = 700L) {
