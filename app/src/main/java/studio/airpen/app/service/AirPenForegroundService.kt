@@ -27,13 +27,21 @@ class AirPenForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        try {
+            AirPen.ensure(applicationContext)
+            if (AirPen.isReady) {
+                AirPen.engine.start(connectPen = true)
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "keep-alive", t)
+        }
         if (AirPen.isReady) {
             when (intent?.action) {
                 ACTION_GESTURE -> runCatching { AirPen.engine.setMode(AppMode.GESTURE) }
                 ACTION_MOUSE -> runCatching { AirPen.engine.setMode(AppMode.MOUSE) }
                 ACTION_TYPE -> runCatching { AirPen.engine.setMode(AppMode.TYPE) }
                 ACTION_STOP -> {
-                    runCatching { AirPen.engine.stop() }
+                    AirPenBackground.running = false
                     runCatching { ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE) }
                     stopSelf()
                     return START_NOT_STICKY
@@ -41,7 +49,8 @@ class AirPenForegroundService : Service() {
             }
         }
         val mode = if (AirPen.isReady) runCatching { AirPen.engine.mode.name }.getOrElse { "Idle" } else "Idle"
-        goForeground("Mode: $mode")
+        goForeground("Running in background · $mode")
+        AirPenBackground.running = true
         return START_STICKY
     }
 
@@ -53,10 +62,7 @@ class AirPenForegroundService : Service() {
             fallbackNotification()
         }
         if (Build.VERSION.SDK_INT >= 34) {
-            val types = intArrayOf(
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
-                0,
-            )
+            val types = intArrayOf(ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE, 0)
             var started = false
             for (type in types) {
                 try {

@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import studio.airpen.app.service.AirPenBackground
 import studio.airpen.app.ui.AirPenAppUi
 import studio.airpen.app.ui.theme.AirPenTheme
 
@@ -58,6 +59,23 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (!AirPen.isReady) return
+        try {
+            val mode = AirPen.engine.mode
+            if (mode == studio.airpen.app.data.AppMode.MOUSE ||
+                mode == studio.airpen.app.data.AppMode.POINTER ||
+                mode == studio.airpen.app.data.AppMode.SCROLL ||
+                mode == studio.airpen.app.data.AppMode.TYPE
+            ) {
+                AirPen.engine.setMode(mode)
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "onResume", t)
+        }
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (!AirPen.isReady) return super.onKeyDown(keyCode, event)
         return try {
@@ -88,7 +106,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Called from the Home screen. Does not run at launch. */
     fun requestConnect() {
         val needed = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= 31) needed += Manifest.permission.BLUETOOTH_CONNECT
@@ -108,9 +125,31 @@ class MainActivity : ComponentActivity() {
         try {
             AirPen.hub.attachActivity(this)
             AirPen.engine.start(connectPen = true)
+            AirPenBackground.start(this)
         } catch (t: Throwable) {
             CrashLog.write(this, t)
             Log.e(TAG, "connectPen", t)
+        }
+    }
+
+    fun startBackground() {
+        AirPenBackground.start(this)
+    }
+
+    fun stopBackground() {
+        AirPenBackground.stop(this)
+    }
+
+    fun openBatterySettings() {
+        try {
+            if (Build.VERSION.SDK_INT >= 23) {
+                startActivity(
+                    Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                        .setData(Uri.parse("package:$packageName")),
+                )
+            }
+        } catch (_: Throwable) {
+            runCatching { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
         }
     }
 
