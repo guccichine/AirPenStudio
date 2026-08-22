@@ -112,9 +112,10 @@ private fun HomeScreen(activity: MainActivity) {
         PermRow("Air Type keyboard (optional IME)", false) { activity.openImeSettings() }
         Text("This build does not connect the S Pen until you tap Connect. That is what was crashing on S22 Ultra.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
         Button(onClick = { activity.requestConnect() }, modifier = Modifier.fillMaxWidth()) { Text("Connect S Pen") }
-        val bg = studio.airpen.app.service.AirPenBackground.running
+        val bg by studio.airpen.app.service.AirPenBackground.runningFlow.collectAsState()
         Button(onClick = { if (bg) activity.stopBackground() else activity.startBackground() }, modifier = Modifier.fillMaxWidth()) { Text(if (bg) "Background ON — tap to stop" else "Work in background") }
         OutlinedButton(onClick = { activity.openBatterySettings() }, modifier = Modifier.fillMaxWidth()) { Text("Allow background battery") }
+        Text("Connect starts a persistent notification so gestures keep working after you leave this screen. Unrestrict battery for AirPen Studio on Samsung.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
         Text("Samsung Settings → Advanced features → S Pen → Air actions: turn Air actions OFF for other apps. Pull the S Pen out, tap Connect, hold the side button and draw.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
         val crash = remember { studio.airpen.app.CrashLog.read(activity) }
         if (!crash.isNullOrBlank()) {
@@ -237,8 +238,10 @@ private fun SettingsPage() {
         SwitchRow("Require button for gestures", g.requireButton) { upd { copy(requireButton = it) } }
         SwitchRow("Show HUD overlay", g.showHud) { upd { copy(showHud = it) }; AirPen.engine.hud.enabled = it }
         SwitchRow("Haptic feedback", g.haptic) { upd { copy(haptic = it) } }
+        SwitchRow("Battery saver (sleeps air motion when idle)", g.batterySaver) { upd { copy(batterySaver = it) } }
         SliderRow("Dead zone", g.deadZone, 0f..0.08f) { upd { copy(deadZone = it) } }
         SliderRow("Flick straightness", g.flickStraightness, 0.5f..0.95f) { upd { copy(flickStraightness = it) } }
+        Button(onClick = { AirPen.store.saveNow() }, modifier = Modifier.fillMaxWidth()) { Text("Save settings") }
         Button(onClick = { AirPen.store.resetDefaults() }, modifier = Modifier.fillMaxWidth()) { Text("Reset all defaults") }
     }
 }
