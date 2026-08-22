@@ -51,7 +51,7 @@ class AppStore(context: Context) {
 
     fun importJson(json: String) {
         val parsed = gson.fromJson(json, AppState::class.java) ?: return
-        update { parsed.copy(version = 1) }
+        update { parsed.copy(version = 2) }
     }
 
     fun resetDefaults() {
@@ -60,7 +60,19 @@ class AppStore(context: Context) {
 
     private fun load(): AppState {
         val raw = prefs.getString(KEY, null) ?: return AppState()
-        return runCatching { gson.fromJson(raw, AppState::class.java) }.getOrElse { AppState() }
+        val parsed = runCatching { gson.fromJson(raw, AppState::class.java) }.getOrElse { return AppState() }
+        if (parsed.version >= 2) return parsed
+        val migrated = parsed.copy(
+            version = 2,
+            mouse = parsed.mouse.copy(alwaysShowCursor = true, cursorSizeDp = kotlin.math.max(parsed.mouse.cursorSizeDp, 44f)),
+            gesture = parsed.gesture.copy(
+                flickStraightness = kotlin.math.min(parsed.gesture.flickStraightness, 0.62f),
+                minFlickLength = kotlin.math.min(parsed.gesture.minFlickLength, 0.12f),
+                deadZone = kotlin.math.min(parsed.gesture.deadZone, 0.008f),
+            ),
+        )
+        persist(migrated)
+        return migrated
     }
 
     private fun persist(state: AppState) {

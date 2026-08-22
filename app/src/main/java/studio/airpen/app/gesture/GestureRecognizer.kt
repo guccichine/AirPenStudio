@@ -32,38 +32,48 @@ class GestureRecognizer {
         }
 
         val straight = if (len <= 1e-4f) 0f else (end / len)
-        val heading = Unistroke.heading(points)
+        val netHeading = Unistroke.heading(points)
+        val finish = Unistroke.finishHeading(points)
+        val heading = if (angleDiff(netHeading, finish) < 0.7f) finish else netHeading
         val deg = ((heading * 180f / PI.toFloat()) + 360f) % 360f
         val closed = Unistroke.isClosed(points)
         val circ = Unistroke.circularity(points)
         val turns = Unistroke.windingTurns(points)
         val aspect = Unistroke.boundingAspect(points)
 
-        if (!typeMode && straight >= settings.flickStraightness && !closed && len >= settings.minFlickLength) {
+        if (!typeMode && !closed && end >= settings.minFlickLength * 0.55f &&
+            straight >= settings.flickStraightness * 0.72f && len >= settings.minFlickLength * 0.7f
+        ) {
             val flick = headingToFlick(deg)
             return Recognition(gesture = flick, score = straight, headingDeg = deg, notes = "flick")
         }
 
         if (typeMode) {
-            val shortFlick = straight >= 0.86f && len >= settings.minFlickLength * 0.7f
-            if (shortFlick) {
+            val ax = kotlin.math.abs(kotlin.math.cos(heading.toDouble())).toFloat()
+            val horizontalDart = straight >= 0.88f && ax > 0.82f && end >= settings.minFlickLength * 0.55f
+            if (horizontalDart) {
                 val flick = headingToFlick(deg)
-                val mapped = when (flick) {
-                    GestureId.FLICK_LEFT, GestureId.FLICK_DOWN_LEFT, GestureId.FLICK_UP_LEFT ->
-                        Recognition(gesture = GestureId.FLICK_LEFT, letter = "⌫", score = straight, headingDeg = deg, notes = "bs")
-                    GestureId.FLICK_RIGHT, GestureId.FLICK_DOWN_RIGHT, GestureId.FLICK_UP_RIGHT ->
-                        Recognition(gesture = GestureId.FLICK_RIGHT, letter = " ", score = straight, headingDeg = deg, notes = "sp")
-                    GestureId.FLICK_DOWN ->
-                        Recognition(gesture = GestureId.FLICK_DOWN, letter = "\n", score = straight, headingDeg = deg, notes = "nl")
-                    GestureId.FLICK_UP ->
-                        Recognition(gesture = GestureId.FLICK_UP, letter = "⇧", score = straight, headingDeg = deg, notes = "sh")
-                    else -> null
+                if (flick == GestureId.FLICK_LEFT || flick == GestureId.FLICK_DOWN_LEFT || flick == GestureId.FLICK_UP_LEFT) {
+                    return Recognition(gesture = GestureId.FLICK_LEFT, letter = "⌫", score = straight, headingDeg = deg, notes = "bs")
                 }
-                if (mapped != null) return mapped
+                if (flick == GestureId.FLICK_RIGHT || flick == GestureId.FLICK_DOWN_RIGHT || flick == GestureId.FLICK_UP_RIGHT) {
+                    return Recognition(gesture = GestureId.FLICK_RIGHT, letter = " ", score = straight, headingDeg = deg, notes = "sp")
+                }
             }
-            val match = Unistroke.recognize(points, Templates.allType) ?: return Recognition(notes = "no-letter")
-            if (match.second < settings.minLet()) return Recognition(score = match.second, notes = "low-letter")
-            return Recognition(letter = match.first.name, score = match.second, headingDeg = deg, closed = closed, notes = "letter")
+            val match = Unistroke.recognizeOriented(points, Templates.allType)
+            if (match != null && match.second >= settings.minLet()) {
+                return Recognition(letter = match.first.name, score = match.second, headingDeg = deg, closed = closed, notes = "letter")
+            }
+            val ay = kotlin.math.abs(kotlin.math.sin(heading.toDouble())).toFloat()
+            val verticalDart = straight >= 0.90f && ay > 0.85f && end >= settings.minFlickLength * 0.7f
+            if (verticalDart) {
+                return if (headingToFlick(deg) == GestureId.FLICK_UP) {
+                    Recognition(gesture = GestureId.FLICK_UP, letter = "⇧", score = straight, headingDeg = deg, notes = "sh")
+                } else {
+                    Recognition(gesture = GestureId.FLICK_DOWN, letter = "\n", score = straight, headingDeg = deg, notes = "nl")
+                }
+            }
+            return Recognition(score = match?.second ?: 0f, headingDeg = deg, notes = if (match == null) "no-letter" else "low-letter")
         }
 
         if (closed && circ >= 0.72f && abs(turns) >= 0.55f) {
@@ -96,18 +106,24 @@ class GestureRecognizer {
     }
 
     fun headingToFlick(deg: Float): GestureId {
-        val d = ((deg + 22.5f) % 360f + 360f) % 360f
+        val d = ((deg % 360f) + 360f) % 360f
         return when {
-            d < 45f -> GestureId.FLICK_RIGHT
-            d < 90f -> GestureId.FLICK_UP_RIGHT
-            d < 135f -> GestureId.FLICK_UP
-            d < 180f -> GestureId.FLICK_UP_LEFT
-            d < 225f -> GestureId.FLICK_LEFT
-            d < 270f -> GestureId.FLICK_DOWN_LEFT
-            d < 315f -> GestureId.FLICK_DOWN
+            d < 30f || d >= 330f -> GestureId.FLICK_RIGHT
+            d < 60f -> GestureId.FLICK_UP_RIGHT
+            d < 120f -> GestureId.FLICK_UP
+            d < 150f -> GestureId.FLICK_UP_LEFT
+            d < 210f -> GestureId.FLICK_LEFT
+            d < 240f -> GestureId.FLICK_DOWN_LEFT
+            d < 300f -> GestureId.FLICK_DOWN
             else -> GestureId.FLICK_DOWN_RIGHT
         }
     }
 
-    private fun GestureSettings.minLet(): Float = 0.42f
+    private fun angleDiff(a: Float, b: Float): Float {
+        var d = abs(a - b)
+        if (d > PI.toFloat()) d = 2f * PI.toFloat() - d
+        return d
+    }
+
+    private fun GestureSettings.minLet(): Float = 0.46f
 }

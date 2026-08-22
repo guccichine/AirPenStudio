@@ -2,7 +2,6 @@ package studio.airpen.app.overlay
 
 import android.content.Context
 import android.graphics.PixelFormat
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -12,9 +11,9 @@ import android.widget.TextView
 import studio.airpen.app.data.AppMode
 
 class HudController(private val context: Context) {
-    private val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val main = Handler(Looper.getMainLooper())
     private var view: LinearLayout? = null
+    private var handle: OverlayWindows.Handle? = null
     private val hide = Runnable { hide() }
     var enabled: Boolean = true
 
@@ -37,7 +36,8 @@ class HudController(private val context: Context) {
 
     fun detach() {
         main.removeCallbacks(hide)
-        view?.let { runCatching { wm.removeView(it) } }
+        handle?.remove()
+        handle = null
         view = null
     }
 
@@ -61,13 +61,10 @@ class HudController(private val context: Context) {
         }
         layout.addView(title)
         layout.addView(sub)
-        val type = if (Build.VERSION.SDK_INT >= 26)
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
-        else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            type,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -75,10 +72,7 @@ class HudController(private val context: Context) {
         )
         lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         lp.y = (72 * density).toInt()
-        try {
-            wm.addView(layout, lp)
-            view = layout
-        } catch (_: Throwable) {
-        }
+        handle = OverlayWindows.add(context, layout, lp)
+        if (handle != null) view = layout
     }
 }
