@@ -151,7 +151,7 @@ object Templates {
             "k" to "0,1 0,0 0,0.5 1,1 0,0.5 1,0",
             "l" to "0,1 0,0 1,0",
             "m" to "0,0 0,1 0.5,0.45 1,1 1,0",
-            "n" to "0,0 0,1 1,0 1,1",
+            "n" to "0,1 0,0 1,1 1,0",
             "o" to "0.5,1 0,0.5 0.5,0 1,0.5 0.5,1",
             "p" to "0,0 0,1 0.75,0.85 0.75,0.55 0,0.45",
             "q" to "0.5,1 0,0.5 0.5,0 1,0.5 0.5,1 0.8,0.2 1,0",
@@ -166,7 +166,7 @@ object Templates {
             "z" to "0,1 1,1 0,0 1,0",
         )
         return paths.map { (name, spec) ->
-            Unistroke.Template(name, Unistroke.normalize(parse(spec)))
+            Unistroke.Template(name, Unistroke.normalizeKeepAspect(parse(spec)))
         }
     }
 
@@ -184,7 +184,7 @@ object Templates {
             "9" to "0.2,0.4 0.5,1 1,0.6 0.2,0.55 0.7,0",
         )
         return paths.map { (name, spec) ->
-            Unistroke.Template(name, Unistroke.normalize(parse(spec)))
+            Unistroke.Template(name, Unistroke.normalizeKeepAspect(parse(spec)))
         }
     }
 
@@ -200,7 +200,7 @@ object Templates {
             "@" to "0.7,0.5 0.3,0.5 0.3,0.2 0.7,0.2 0.8,0.8 0.2,0.9 0.1,0.4",
         )
         return paths.map { (name, spec) ->
-            Unistroke.Template(name, Unistroke.normalize(parse(spec)))
+            Unistroke.Template(name, Unistroke.normalizeKeepAspect(parse(spec)))
         }
     }
 
