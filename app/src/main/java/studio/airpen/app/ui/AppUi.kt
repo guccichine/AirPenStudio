@@ -71,7 +71,7 @@ fun AirPenAppUi(activity: MainActivity) {
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
                 Tab.Home -> HomeScreen(activity)
-                Tab.Gestures -> GesturesScreen()
+                Tab.Gestures -> GestureSettingsScreen()
                 Tab.Mouse -> MouseScreen()
                 Tab.Type -> TypeScreen()
                 Tab.More -> MoreScreen(activity)
@@ -112,6 +112,9 @@ private fun HomeScreen(activity: MainActivity) {
         PermRow("Air Type keyboard (optional IME)", false) { activity.openImeSettings() }
         Text("This build does not connect the S Pen until you tap Connect. That is what was crashing on S22 Ultra.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
         Button(onClick = { activity.requestConnect() }, modifier = Modifier.fillMaxWidth()) { Text("Connect S Pen") }
+        val bg = studio.airpen.app.service.AirPenBackground.running
+        Button(onClick = { if (bg) activity.stopBackground() else activity.startBackground() }, modifier = Modifier.fillMaxWidth()) { Text(if (bg) "Background ON — tap to stop" else "Work in background") }
+        OutlinedButton(onClick = { activity.openBatterySettings() }, modifier = Modifier.fillMaxWidth()) { Text("Allow background battery") }
         Text("Samsung Settings → Advanced features → S Pen → Air actions: turn Air actions OFF for other apps. Pull the S Pen out, tap Connect, hold the side button and draw.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
         val crash = remember { studio.airpen.app.CrashLog.read(activity) }
         if (!crash.isNullOrBlank()) {
@@ -161,59 +164,6 @@ private fun PracticePad() {
                 }
             }
             Text("Draw here", color = Color.White.copy(alpha = 0.35f), modifier = Modifier.align(Alignment.Center))
-        }
-    }
-}
-
-@Composable
-private fun GesturesScreen() {
-    var filter by remember { mutableStateOf(GestureCategory.DIRECTION) }
-    var editing by remember { mutableStateOf<GestureId?>(null) }
-    val state by AirPen.store.state.collectAsState()
-    val profile = state.profiles.firstOrNull { it.id == state.activeProfileId } ?: state.profiles.first()
-    Column(Modifier.fillMaxSize()) {
-        Row(Modifier.horizontalScroll(rememberScrollState()).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GestureCategory.entries.forEach { c -> FilterChip(selected = filter == c, onClick = { filter = c }, label = { Text(c.name) }) }
-        }
-        Text("Profile: ${profile.name}", modifier = Modifier.padding(horizontal = 16.dp), color = Gold)
-        LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(GestureId.entries.filter { it.category == filter }, key = { it.name }) { g ->
-                val bound = profile.map[g] ?: BoundAction()
-                Card(modifier = Modifier.fillMaxWidth().clickable { editing = g }, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                    Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(g.symbol, fontSize = 22.sp, modifier = Modifier.width(40.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(g.label, fontWeight = FontWeight.Medium)
-                            Text(bound.id.label + bound.arg.let { if (it.isBlank()) "" else " · $it" }, fontSize = 13.sp, color = Gold)
-                        }
-                    }
-                }
-            }
-        }
-    }
-    editing?.let { g -> ActionPicker(g, onClose = { editing = null }) }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ActionPicker(gesture: GestureId, onClose: () -> Unit) {
-    var group by remember { mutableStateOf(ActionGroup.NAVIGATION) }
-    var arg by remember { mutableStateOf("") }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).clickable { onClose() }) {
-        Card(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(520.dp), shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)) {
-            Column(Modifier.padding(16.dp)) {
-                Text("Map ${gesture.label}", style = MaterialTheme.typography.titleLarge)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ActionGroup.entries.forEach { g -> FilterChip(selected = group == g, onClick = { group = g }, label = { Text(g.name) }) }
-                }
-                OutlinedTextField(value = arg, onValueChange = { arg = it }, label = { Text("Argument (app package, URL, text, combo)") }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
-                LazyColumn(Modifier.weight(1f)) {
-                    items(ActionId.entries.filter { it.group == group }) { a ->
-                        Text(a.label, modifier = Modifier.fillMaxWidth().clickable { AirPen.store.setBinding(gesture, BoundAction(a, arg)); onClose() }.padding(vertical = 10.dp))
-                    }
-                }
-                OutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text("Close") }
-            }
         }
     }
 }
