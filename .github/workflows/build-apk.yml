@@ -46,17 +46,20 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.4
-          name: AirPen Studio 1.0.4
+          tag_name: v1.0.5
+          name: AirPen Studio 1.0.5
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            Save button for gesture mappings, and AirPen keeps running in the background after you leave the app.
+            Save button after mapping gestures, and the app keeps working in the background after you leave it.
 
             **Uninstall any older AirPen Studio first**, then install this APK.
 
             1. Download **AirPenStudio.apk** below and install it.
             2. Open AirPen Studio. Enable **Accessibility** and **Display over other apps**.
-            3. Tap **Connect S Pen**. A notification means it is running in the background.
-            4. Gestures tab: tap a flick, pick an action, tap **Save**.
-            5. Tap **Allow background battery** so Samsung does not kill it.
+            3. Tap **Connect S Pen**. You should see a persistent **Running in background** notification.
+            4. Tap **Allow background battery** (Samsung: Apps → AirPen Studio → Battery → Unrestricted).
+            5. Gestures tab: tap a flick, pick an action, tap **Save**.
+            6. Leave the app — flicks and air-mouse should still work.
+
+            If it still closes, reopen it — the Home screen will show a **Last crash** dump. Screenshot that.
