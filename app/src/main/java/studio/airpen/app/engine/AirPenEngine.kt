@@ -15,7 +15,6 @@ import studio.airpen.app.action.ActionExecutor
 import studio.airpen.app.data.ActionId
 import studio.airpen.app.data.AppMode
 import studio.airpen.app.data.AppStore
-import studio.airpen.app.data.BoundAction
 import studio.airpen.app.data.GestureId
 import studio.airpen.app.gesture.GestureRecognizer
 import studio.airpen.app.gesture.Recognition
@@ -23,12 +22,11 @@ import studio.airpen.app.gesture.StrokeBuffer
 import studio.airpen.app.mouse.AirMouseController
 import studio.airpen.app.overlay.HudController
 import studio.airpen.app.overlay.KeepAliveOverlay
-import studio.airpen.app.overlay.KeyboardOverlay
+import studio.airpen.app.overlay.StopOverlay
 import studio.airpen.app.spen.PenButton
 import studio.airpen.app.spen.PenMotion
 import studio.airpen.app.spen.SpenHub
 import studio.airpen.app.spen.SpenStatus
-import studio.airpen.app.type.AirTypeEngine
 
 class AirPenEngine(
     private val context: Context,
@@ -39,11 +37,10 @@ class AirPenEngine(
     val recognizer = GestureRecognizer()
     val mouse = AirMouseController(context, executor)
     val hud = HudController(context)
-    val typer = AirTypeEngine()
     val stroke = StrokeBuffer()
 
     private val main = Handler(Looper.getMainLooper())
-    private val _mode = MutableStateFlow(store.current.general.lastMode)
+    private val _mode = MutableStateFlow(sanitizeMode(store.current.general.lastMode))
     val modeFlow: StateFlow<AppMode> = _mode.asStateFlow()
     val mode: AppMode get() = _mode.value
 
@@ -77,13 +74,13 @@ class AirPenEngine(
     }
 
     @Volatile private var wired = false
+    @Volatile private var halted = true
 
     fun start(connectPen: Boolean = false) {
         if (!wired) {
             wired = true
             hub.settings = store.current.gesture
             mouse.settings = store.current.mouse
-            typer.settings = store.current.type
             hud.enabled = store.current.gesture.showHud
             hub.motionListener = { m ->
                 try {
@@ -105,16 +102,18 @@ class AirPenEngine(
                     SpenStatus.UNSUPPORTED -> "S Pen remote not on this device — use the Practice pad"
                     SpenStatus.ERROR -> "S Pen connection error — reconnecting…"
                     SpenStatus.CONNECTING -> "Connecting…"
-                    SpenStatus.DISCONNECTED -> "S Pen disconnected"
+                    SpenStatus.DISCONNECTED -> if (halted) "Stopped" else "S Pen disconnected"
                     SpenStatus.UNKNOWN -> "Tap Connect S Pen"
                 }
                 when (st) {
                     SpenStatus.CONNECTED -> {
+                        halted = false
                         KeepAliveOverlay.show(context)
+                        StopOverlay.show(context)
                         hub.registerListeners()
                     }
                     SpenStatus.DISCONNECTED, SpenStatus.ERROR -> {
-                        if (store.current.general.runInBackground) {
+                        if (!halted && store.current.general.runInBackground) {
                             main.removeCallbacks(reconnectPen)
                             main.postDelayed(reconnectPen, 800L)
                         }
@@ -136,12 +135,13 @@ class AirPenEngine(
             executor.precisionToggler = { mouse.precision = !mouse.precision }
             executor.clickDispatcher = { mouse.click(it) }
             executor.scrollDispatcher = { dx, dy -> mouse.scroll(dx, dy) }
-            executor.shiftToggler = { typer.shift = !typer.shift }
-            executor.capsToggler = { typer.capsLock = !typer.capsLock; hud.show("Caps", if (typer.capsLock) "ON" else "off") }
-            executor.textInjector = { /* accessibility path in executor */ }
+            executor.stopEngine = {
+                studio.airpen.app.service.AirPenBackground.stop(context)
+            }
             _live.value = "Tap Connect S Pen"
         }
         if (connectPen) {
+            halted = false
             try {
                 hub.connect()
             } catch (t: Throwable) {
@@ -151,59 +151,70 @@ class AirPenEngine(
         }
     }
 
-    fun stop() {
-        hub.motionListener = null
-        hub.buttonListener = null
+    /** Hard stop: disconnect the pen, drop overlays, cancel in-flight flicks. */
+    fun halt() {
+        halted = true
+        drawing = false
+        longPosted = false
+        clickCount = 0
+        main.removeCallbacks(clickReset)
+        main.removeCallbacks(longPress)
+        main.removeCallbacks(idleSleep)
+        main.removeCallbacks(reconnectPen)
+        try {
+            hub.disconnect()
+        } catch (t: Throwable) {
+            Log.w(TAG, "halt disconnect", t)
+        }
         mouse.detach()
         hud.detach()
-        KeyboardOverlay.detach()
+        KeepAliveOverlay.hide()
+        StopOverlay.hide()
+        _mode.value = AppMode.GESTURE
+        _live.value = "Stopped"
+        try {
+            store.update { it.copy(general = it.general.copy(lastMode = AppMode.GESTURE, runInBackground = false)) }
+        } catch (t: Throwable) {
+            Log.w(TAG, "halt persist", t)
+        }
     }
 
+    fun stop() = halt()
+
     fun setMode(mode: AppMode) {
-        if (_mode.value == mode) {
-            applyMode(mode)
+        val next = sanitizeMode(mode)
+        if (_mode.value == next) {
+            applyMode(next)
             return
         }
-        _mode.value = mode
-        store.update { it.copy(general = it.general.copy(lastMode = mode)) }
-        applyMode(mode)
+        _mode.value = next
+        store.update { it.copy(general = it.general.copy(lastMode = next)) }
+        applyMode(next)
         buzz(30)
-        hud.show(mode.name.lowercase().replaceFirstChar { it.titlecase() } + " mode", "AirPen")
+        hud.show(next.name.lowercase().replaceFirstChar { it.titlecase() } + " mode", "AirPen")
     }
 
     private fun applyMode(mode: AppMode) {
         mouse.settings = store.current.mouse
-        when (mode) {
+        when (sanitizeMode(mode)) {
             AppMode.MOUSE, AppMode.POINTER, AppMode.SCROLL -> {
                 mouse.detach()
                 mouse.attach()
                 mouse.show()
-                KeyboardOverlay.detach()
                 if (!mouse.overlayReady) {
                     _live.value = "Cursor needs Display over other apps + Accessibility"
                 }
             }
-            AppMode.TYPE -> {
-                if (store.current.type.engine != "write") {
-                    mouse.detach()
-                    mouse.attach()
-                    mouse.show()
-                    KeyboardOverlay.detach()
-                    KeyboardOverlay.attach(context, this)
-                } else {
-                    mouse.detach()
-                    KeyboardOverlay.detach()
-                }
-            }
             else -> {
-                mouse.detach(); KeyboardOverlay.detach()
+                mouse.detach()
             }
         }
         hub.registerListeners()
-        _live.value = "Mode: ${mode.name}"
+        _live.value = "Mode: ${sanitizeMode(mode).name}"
     }
 
     fun onMotion(m: PenMotion) {
+        if (halted) return
         lastMotionAt = SystemClock.uptimeMillis()
         scheduleIdle()
         val g = store.current.gesture
@@ -228,16 +239,7 @@ class AirPenEngine(
             AppMode.MEDIA -> {
                 if (drawing || !g.requireButton) stroke.add(absX, absY, m.t)
             }
-            AppMode.GESTURE -> {
-                if (drawing || !g.requireButton) {
-                    stroke.add(absX, absY, m.t)
-                }
-            }
-            AppMode.TYPE -> {
-                if (store.current.type.engine != "write") {
-                    mouse.move(m.dx, m.dy)
-                    KeyboardOverlay.highlight(mouse.x, mouse.y)
-                }
+            AppMode.GESTURE, AppMode.TYPE -> {
                 if (drawing || !g.requireButton) {
                     stroke.add(absX, absY, m.t)
                 }
@@ -246,6 +248,7 @@ class AirPenEngine(
     }
 
     fun onButton(b: PenButton) {
+        if (halted) return
         val now = b.t
         val g = store.current.gesture
         if (b.down) {
@@ -259,9 +262,6 @@ class AirPenEngine(
             longPosted = true
             main.removeCallbacks(longPress)
             main.postDelayed(longPress, store.current.general.longPressMs)
-            if (mode == AppMode.MOUSE && mouse.dragLock) {
-                // keep dragging
-            }
         } else {
             drawing = false
             hub.passAllMotion = false
@@ -278,84 +278,34 @@ class AirPenEngine(
                     }
                 }
                 AppMode.SCROLL -> if (!moved) registerClick(now)
-                AppMode.TYPE -> finishStroke(typeMode = true)
-                AppMode.GESTURE, AppMode.MEDIA, AppMode.CAMERA -> {
-                    if (moved) finishStroke(typeMode = false)
+                AppMode.GESTURE, AppMode.MEDIA, AppMode.CAMERA, AppMode.TYPE -> {
+                    if (moved) finishStroke()
                     else registerClick(now)
                 }
             }
         }
     }
 
-    fun feedPractice(points: List<studio.airpen.app.gesture.Pt>, typeMode: Boolean = false) {
+    fun feedPractice(points: List<studio.airpen.app.gesture.Pt>) {
         lastStroke = points
-        val rec = recognizer.recognizeStroke(
-            points,
-            store.current.gesture,
-            typeMode,
-            store.current.letterSamples,
-            typer.buffer.toString(),
-            store.current.type.minConfidence,
-        )
-        handleRecognition(rec, typeMode)
+        val rec = recognizer.recognizeStroke(points, store.current.gesture)
+        handleRecognition(rec)
     }
 
     private var lastStroke: List<studio.airpen.app.gesture.Pt> = emptyList()
 
     fun lastDrawn(): List<studio.airpen.app.gesture.Pt> = lastStroke
 
-    fun trainLastLetter(letter: String) {
-        if (lastStroke.size >= 4 && letter.isNotBlank()) {
-            store.addLetterSample(letter, lastStroke)
-            hud.show(letter, "trained")
-        }
-    }
-
-    private fun finishStroke(typeMode: Boolean) {
-        var pts = stroke.snapshot()
-        if (typeMode && store.current.type.invertAirY) {
-            pts = pts.map { it.copy(y = -it.y) }
-        }
+    private fun finishStroke() {
+        val pts = stroke.snapshot()
         lastStroke = pts
-        val rec = recognizer.recognizeStroke(
-            pts,
-            store.current.gesture,
-            typeMode,
-            store.current.letterSamples,
-            typer.buffer.toString(),
-            store.current.type.minConfidence,
-        )
-        handleRecognition(rec, typeMode)
+        val rec = recognizer.recognizeStroke(pts, store.current.gesture)
+        handleRecognition(rec)
         stroke.clear()
     }
 
-    private fun handleRecognition(rec: Recognition, typeMode: Boolean) {
+    private fun handleRecognition(rec: Recognition) {
         _last.value = rec
-        if (typeMode) {
-            val letter = rec.letter
-            if (letter != null) {
-                when (letter) {
-                    "⌫" -> {
-                        typer.backspace()
-                        executor.execute(BoundAction(ActionId.TYPE_BACKSPACE))
-                    }
-                    " " -> executor.execute(BoundAction(ActionId.TYPE_SPACE))
-                    "\n" -> executor.execute(BoundAction(ActionId.TYPE_ENTER))
-                    "⇧" -> {
-                        typer.shift = !typer.shift
-                        hud.show("Shift", if (typer.shift) "ON" else "off")
-                    }
-                    else -> {
-                        val out = typer.consumeLetter(letter)
-                        if (out.isNotEmpty()) executor.injectText(out)
-                    }
-                }
-                hud.show(letter, "score ${(rec.score * 100).toInt()}%" +
-                    rec.alternatives.drop(1).take(2).joinToString("") { " · ${it.first}" })
-                buzz(20)
-                return
-            }
-        }
         val g = rec.gesture ?: run {
             hud.show("?", rec.notes)
             return
@@ -387,13 +337,6 @@ class AirPenEngine(
             2 -> GestureId.BUTTON_DOUBLE
             else -> GestureId.BUTTON_TRIPLE
         }
-        if (mode == AppMode.TYPE && id == GestureId.BUTTON_CLICK) {
-            val key = KeyboardOverlay.hit(mouse.x, mouse.y)
-            if (key != null) {
-                typeKey(key)
-                return
-            }
-        }
         val bound = store.actionFor(id)
         if (mode == AppMode.MOUSE && id == GestureId.BUTTON_CLICK && bound.id == ActionId.MOUSE_CLICK) {
             mouse.click(ActionExecutor.ClickKind.LEFT)
@@ -402,24 +345,6 @@ class AirPenEngine(
         }
         hud.show(id.label, bound.id.label)
         executor.execute(bound)
-    }
-
-    private fun typeKey(key: String) {
-        when (key) {
-            "⌫" -> executor.execute(BoundAction(ActionId.TYPE_BACKSPACE))
-            " " -> executor.execute(BoundAction(ActionId.TYPE_SPACE))
-            "⏎" -> executor.execute(BoundAction(ActionId.TYPE_ENTER))
-            "⇧" -> {
-                typer.shift = !typer.shift
-                hud.show("Shift", if (typer.shift) "ON" else "off")
-            }
-            else -> {
-                val out = typer.consumeLetter(key)
-                if (out.isNotEmpty()) executor.injectText(out)
-                hud.show(out.ifBlank { key }, "key")
-            }
-        }
-        buzz(18)
     }
 
     private fun onLongPress() {
@@ -431,7 +356,6 @@ class AirPenEngine(
     }
 
     private fun scheduleIdle() {
-        // Never drop air-motion while the S Pen should stay connected.
         if (store.current.general.runInBackground) return
         if (!store.current.gesture.batterySaver) return
         main.removeCallbacks(idleSleep)
@@ -454,5 +378,8 @@ class AirPenEngine(
 
     companion object {
         private const val TAG = "AirPenEngine"
+
+        fun sanitizeMode(mode: AppMode): AppMode =
+            if (mode == AppMode.TYPE) AppMode.GESTURE else mode
     }
 }

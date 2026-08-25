@@ -2,7 +2,6 @@ package studio.airpen.app.gesture
 
 import studio.airpen.app.data.GestureId
 import studio.airpen.app.data.GestureSettings
-import studio.airpen.app.data.LetterSample
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -21,10 +20,6 @@ class GestureRecognizer {
     fun recognizeStroke(
         points: List<Pt>,
         settings: GestureSettings,
-        typeMode: Boolean = false,
-        userSamples: List<LetterSample> = emptyList(),
-        prefix: String = "",
-        minLetter: Float = 0.40f,
     ): Recognition {
         if (points.size < 4) return Recognition(notes = "too-short")
         val len = Unistroke.pathLength(points)
@@ -46,52 +41,11 @@ class GestureRecognizer {
         val turns = Unistroke.windingTurns(points)
         val aspect = Unistroke.boundingAspect(points)
 
-        if (!typeMode && !closed && end >= settings.minFlickLength * 0.55f &&
+        if (!closed && end >= settings.minFlickLength * 0.55f &&
             straight >= settings.flickStraightness * 0.72f && len >= settings.minFlickLength * 0.7f
         ) {
             val flick = headingToFlick(deg)
             return Recognition(gesture = flick, score = straight, headingDeg = deg, notes = "flick")
-        }
-
-        if (typeMode) {
-            val ax = kotlin.math.abs(kotlin.math.cos(heading.toDouble())).toFloat()
-            val horizontalDart = straight >= 0.88f && ax > 0.82f && end >= settings.minFlickLength * 0.55f
-            if (horizontalDart) {
-                val flick = headingToFlick(deg)
-                if (flick == GestureId.FLICK_LEFT || flick == GestureId.FLICK_DOWN_LEFT || flick == GestureId.FLICK_UP_LEFT) {
-                    return Recognition(gesture = GestureId.FLICK_LEFT, letter = "⌫", score = straight, headingDeg = deg, notes = "bs")
-                }
-                if (flick == GestureId.FLICK_RIGHT || flick == GestureId.FLICK_DOWN_RIGHT || flick == GestureId.FLICK_UP_RIGHT) {
-                    return Recognition(gesture = GestureId.FLICK_RIGHT, letter = " ", score = straight, headingDeg = deg, notes = "sp")
-                }
-            }
-            val ranked = LetterRecognizer.ranked(points, userSamples, prefix, minLetter)
-            val top = ranked.firstOrNull()
-            if (top != null && top.score >= minLetter) {
-                return Recognition(
-                    letter = top.letter,
-                    score = top.score,
-                    headingDeg = deg,
-                    closed = closed,
-                    notes = "letter",
-                    alternatives = ranked.map { it.letter to it.score },
-                )
-            }
-            val ay = kotlin.math.abs(kotlin.math.sin(heading.toDouble())).toFloat()
-            val verticalDart = straight >= 0.90f && ay > 0.85f && end >= settings.minFlickLength * 0.7f
-            if (verticalDart) {
-                return if (headingToFlick(deg) == GestureId.FLICK_UP) {
-                    Recognition(gesture = GestureId.FLICK_UP, letter = "⇧", score = straight, headingDeg = deg, notes = "sh")
-                } else {
-                    Recognition(gesture = GestureId.FLICK_DOWN, letter = "\n", score = straight, headingDeg = deg, notes = "nl")
-                }
-            }
-            return Recognition(
-                score = top?.score ?: 0f,
-                headingDeg = deg,
-                notes = if (top == null) "no-letter" else "low-letter",
-                alternatives = ranked.map { it.letter to it.score },
-            )
         }
 
         if (closed && circ >= 0.72f && abs(turns) >= 0.55f) {

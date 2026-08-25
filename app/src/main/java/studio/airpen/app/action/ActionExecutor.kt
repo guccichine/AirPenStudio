@@ -38,6 +38,7 @@ class ActionExecutor(private val appContext: Context) {
     var textInjector: ((String) -> Unit)? = null
     var shiftToggler: (() -> Unit)? = null
     var capsToggler: (() -> Unit)? = null
+    var stopEngine: (() -> Unit)? = null
 
     private val main = Handler(Looper.getMainLooper())
     private var torchOn = false
@@ -152,9 +153,8 @@ class ActionExecutor(private val appContext: Context) {
             ActionId.DISMISS_SHADE -> if (Build.VERSION.SDK_INT >= 31) svc?.performGlobalAction(15)
             ActionId.ACCESSIBILITY_ALL_APPS -> if (Build.VERSION.SDK_INT >= 31) svc?.performGlobalAction(14)
             ActionId.MODE_GESTURE -> modeChanger?.invoke(AppMode.GESTURE)
-            ActionId.MODE_GESTURE -> modeChanger?.invoke(AppMode.GESTURE)
             ActionId.MODE_MOUSE -> modeChanger?.invoke(AppMode.MOUSE)
-            ActionId.MODE_TYPE -> modeChanger?.invoke(AppMode.TYPE)
+            ActionId.MODE_TYPE, ActionId.STOP_ENGINE -> stopEngine?.invoke()
             ActionId.MODE_SCROLL -> modeChanger?.invoke(AppMode.SCROLL)
             ActionId.MODE_POINTER -> modeChanger?.invoke(AppMode.POINTER)
             ActionId.MODE_MEDIA -> modeChanger?.invoke(AppMode.MEDIA)
@@ -405,9 +405,10 @@ class ActionExecutor(private val appContext: Context) {
     }
 
     private fun cycleMode() {
-        val order = AppMode.entries
-        val cur = studio.airpen.app.AirPen.engine.mode
-        modeChanger?.invoke(order[(order.indexOf(cur) + 1) % order.size])
+        val order = AppMode.entries.filter { it != AppMode.TYPE }
+        val cur = studio.airpen.app.engine.AirPenEngine.sanitizeMode(studio.airpen.app.AirPen.engine.mode)
+        val idx = order.indexOf(cur).coerceAtLeast(0)
+        modeChanger?.invoke(order[(idx + 1) % order.size])
     }
 
     private fun openPackage(pkg: String) {

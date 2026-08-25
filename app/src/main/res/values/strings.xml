@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AirPen Studio</string>
-    <string name="ime_name">AirPen Air Type</string>
-    <string name="ime_subtype">Air write</string>
-    <string name="accessibility_description">AirPen Studio uses Accessibility to draw a cursor, tap the screen from S Pen air motion, press Back/Home, and insert text. Motion stays on the device.</string>
+    <string name="accessibility_description">AirPen Studio uses Accessibility to draw a cursor, tap the screen from S Pen air motion, and press Back/Home. Motion stays on the device.</string>
     <string name="action_mouse">Air mouse</string>
-    <string name="action_type">Air type</string>
+    <string name="action_stop">Stop</string>
     <string name="action_gestures">Gestures</string>
     <string name="action_play">Play / pause</string>
     <string name="action_next">Next</string>

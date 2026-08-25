@@ -147,6 +147,24 @@ class AppStore(context: Context) {
                 },
             )
         }
+        if (next.version < 5) {
+            next = next.copy(
+                version = 5,
+                general = next.general.copy(
+                    lastMode = if (next.general.lastMode == AppMode.TYPE) AppMode.GESTURE else next.general.lastMode,
+                ),
+                profiles = next.profiles
+                    .filterNot { it.id == "typing" }
+                    .map { p ->
+                        val map = p.map.mapValues { (_, bound) ->
+                            if (bound.id == ActionId.MODE_TYPE) BoundAction(ActionId.STOP_ENGINE, bound.arg) else bound
+                        }
+                        p.copy(map = map)
+                    },
+                activeProfileId = if (next.activeProfileId == "typing") "system" else next.activeProfileId,
+                letterSamples = emptyList(),
+            )
+        }
         return next
     }
 

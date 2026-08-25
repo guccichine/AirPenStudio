@@ -38,6 +38,11 @@ object AirPenBackground {
     fun stop(context: Context) {
         persistWanted(false)
         try {
+            if (AirPen.isReady) AirPen.engine.halt()
+        } catch (t: Throwable) {
+            Log.w("AirPenBg", "halt", t)
+        }
+        try {
             val i = Intent(context.applicationContext, AirPenForegroundService::class.java)
                 .setAction(AirPenForegroundService.ACTION_STOP)
             context.applicationContext.startService(i)

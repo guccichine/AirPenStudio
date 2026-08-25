@@ -1,6 +1,6 @@
 # AirPen Studio
 
-A full S Pen customisation app for Samsung Galaxy phones and tablets: **air gestures** (8-way flicks, diagonals, and shapes), **air mouse from across the room**, and **air typing**.
+A full S Pen customisation app for Samsung Galaxy phones and tablets: **air gestures** (8-way flicks, diagonals, and shapes) and **air mouse from across the room**.
 
 ## Install on S22 Ultra (download APK)
 
@@ -18,15 +18,17 @@ Samsung and S Pen are trademarks of Samsung Electronics. This project is not aff
 
 - **Gestures:** up, down, left, right, four diagonals, circle (CW/CCW), square, triangle, zigzag, check, X, plus, heart, infinity, arrow, caret, star, spiral, pigtail, brackets.
 - **Flick to scroll (exactly one page):** hold the side button, flick **up** or **down**. Each flick moves **one full page** in that direction and stops — no extra fling. Works in Chrome, feeds, Settings, any app.
-- **Button:** click, double-click, triple-click, long-press — each remappable.
+- **Button:** click, double-click, triple-click, long-press — each remappable. Triple-click stops AirPen.
 - **Air mouse:** S Pen IMU moves an on-screen cursor (up to ~10 m). Click, double-click, long-press, drag, scroll, precision mode.
-- **Air type:** write letters in the air (now with $1 + point-cloud matching, extra templates, next-letter boost, and a handwriting trainer). Flicks: ← backspace, → space, ↓ enter, ↑ shift. Or point at a floating QWERTY.
+- **STOP:** big Stop on Home, a floating STOP overlay over other apps, and a Stop action on the persistent notification. Cuts the S Pen session, air mouse, and background service immediately.
 - **More gesture actions:** YouTube, Maps, Chrome, WhatsApp, share, zoom, jump to top/bottom, pull-to-refresh, D-pad, Wi-Fi/Bluetooth settings, notes, gallery, and more. Search them in the Gestures tab.
 - **New shapes:** wave, diamond, hook.
 - **Camera tracking:** fallback mouse for S Pens that dropped BLE (S25 Ultra and later). Track a bright tip in the camera.
-- **Profiles:** System, Reading, Media, Typing, plus your own. Per-app profile switching.
+- **Profiles:** System, Reading, Media, plus your own. Per-app profile switching.
 - **Macros, HUD, haptics, invert axes, dead zone, sensitivity, export/import JSON.**
 - **Practice pad** on the Home screen so you can train the recogniser with a finger.
+
+Air typing (air-write IME / letter recognition) has been removed.
 
 ## Supported hardware
 

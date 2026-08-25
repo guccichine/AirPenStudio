@@ -46,18 +46,17 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.8
-          name: AirPen Studio 1.0.8
+          tag_name: v1.0.9
+          name: AirPen Studio 1.0.9
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            **1.0.8** — Air Type letter recognition overhaul, handwriting trainer, and many more gesture actions.
+            **1.0.9** — STOP button (Home, overlay, notification). Air typing removed.
 
             **Uninstall any older AirPen Studio first**, then install this APK.
 
             1. Download **AirPenStudio.apk** below and install it.
             2. Enable **Accessibility** and **Display over other apps**.
             3. Tap **Connect S Pen**.
-            4. **Air Type:** Type tab → Start Air Type. Hold the side button and write a letter.
-            5. If a letter is wrong: Home → turn on **Recognize as letter**, draw it, tap the correct letter to train.
-            6. **Gestures** tab: search actions (YouTube, share, zoom, jump to top, Wi-Fi, …) and bind wave / diamond / hook too.
+            4. **STOP** on Home, the floating overlay, or the notification cuts the session immediately.
+            5. **Gestures** tab: search actions (YouTube, share, zoom, jump to top, Wi-Fi, …) and bind wave / diamond / hook too.

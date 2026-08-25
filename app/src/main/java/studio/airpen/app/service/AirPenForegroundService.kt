@@ -27,6 +27,17 @@ class AirPenForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) {
+            try {
+                if (AirPen.isReady) AirPen.engine.halt()
+            } catch (t: Throwable) {
+                Log.e(TAG, "halt", t)
+            }
+            AirPenBackground.running = false
+            runCatching { ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE) }
+            stopSelf()
+            return START_NOT_STICKY
+        }
         try {
             AirPen.ensure(applicationContext)
             if (AirPen.isReady) {
@@ -40,13 +51,6 @@ class AirPenForegroundService : Service() {
             when (intent?.action) {
                 ACTION_GESTURE -> runCatching { AirPen.engine.setMode(AppMode.GESTURE) }
                 ACTION_MOUSE -> runCatching { AirPen.engine.setMode(AppMode.MOUSE) }
-                ACTION_TYPE -> runCatching { AirPen.engine.setMode(AppMode.TYPE) }
-                ACTION_STOP -> {
-                    AirPenBackground.running = false
-                    runCatching { ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE) }
-                    stopSelf()
-                    return START_NOT_STICKY
-                }
             }
         }
         val mode = if (AirPen.isReady) runCatching { AirPen.engine.mode.name }.getOrElse { "Idle" } else "Idle"
@@ -125,7 +129,7 @@ class AirPenForegroundService : Service() {
             .setOnlyAlertOnce(true)
             .addAction(action(2, "Gestures", ACTION_GESTURE))
             .addAction(action(3, "Mouse", ACTION_MOUSE))
-            .addAction(action(4, "Type", ACTION_TYPE))
+            .addAction(action(4, "Stop", ACTION_STOP))
             .build()
     }
 
@@ -142,7 +146,6 @@ class AirPenForegroundService : Service() {
         const val CHANNEL = "airpen_live"
         const val ACTION_GESTURE = "studio.airpen.app.GESTURE"
         const val ACTION_MOUSE = "studio.airpen.app.MOUSE"
-        const val ACTION_TYPE = "studio.airpen.app.TYPE"
         const val ACTION_STOP = "studio.airpen.app.STOP"
     }
 }

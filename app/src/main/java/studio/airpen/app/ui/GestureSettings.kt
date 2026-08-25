@@ -127,10 +127,11 @@ private fun GestureActionPicker(gesture: GestureId, onSaved: () -> Unit, onClose
                 LazyColumn(Modifier.weight(1f)) {
                     val q = query.trim()
                     val list = if (q.isEmpty()) {
-                        ActionId.entries.filter { it.group == group }
+                        ActionId.entries.filter { it.group == group && it != ActionId.MODE_TYPE }
                     } else {
                         ActionId.entries.filter {
-                            it.label.contains(q, ignoreCase = true) || it.name.contains(q, ignoreCase = true)
+                            it != ActionId.MODE_TYPE &&
+                                (it.label.contains(q, ignoreCase = true) || it.name.contains(q, ignoreCase = true))
                         }
                     }
                     items(list) { a ->

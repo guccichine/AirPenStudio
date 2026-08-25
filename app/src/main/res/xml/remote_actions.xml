@@ -32,8 +32,5 @@
         <preference name="gesture" value="circle_ccw" />
         <preference name="motion_only" value="true" />
     </action>
-    <action id="type_mode" label="@string/action_type" priority="9" trigger_key="N">
-        <preference name="button_only" value="false" />
-    </action>
     <action id="shot" label="@string/action_shot" priority="10" trigger_key="SYSRQ" />
 </remote-actions>

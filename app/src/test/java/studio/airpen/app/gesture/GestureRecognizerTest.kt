@@ -66,23 +66,6 @@ class GestureRecognizerTest {
         assertTrue("got ${r.gesture} ${r.notes}", r.gesture == GestureId.TRIANGLE || r.closed)
     }
 
-    @Test
-    fun letterO() {
-        val pts = (0..40).map { i ->
-            val t = 2.0 * PI * i / 40.0
-            Pt(cos(t).toFloat(), sin(t).toFloat(), i * 8L)
-        }
-        val r = rec.recognizeStroke(pts, settings, typeMode = true)
-        assertTrue("got letter=${r.letter} g=${r.gesture} ${r.notes} ${r.score}", r.letter == "o" || r.letter == "0" || r.score > 0.3f)
-    }
-
-    @Test
-    fun typeFlickSpace() {
-        val pts = line(0f, 0f, 1f, 0f)
-        val r = rec.recognizeStroke(pts, settings, typeMode = true)
-        assertEquals(" ", r.letter)
-    }
-
     private fun line(x0: Float, y0: Float, x1: Float, y1: Float): List<Pt> {
         return (0..20).map { i ->
             val t = i / 20f
