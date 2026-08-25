@@ -67,6 +67,10 @@ class AppStore(context: Context) {
         saveNow()
     }
 
+    fun saveNow(): Boolean {
+        return persistSync(current)
+    }
+
     fun exportJson(): String = gson.toJson(current)
 
     fun importJson(json: String) {
