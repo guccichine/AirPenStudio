@@ -47,8 +47,24 @@ class AppStore(context: Context) {
         }
     }
 
-    fun saveNow(): Boolean {
-        return persistSync(current)
+    fun addLetterSample(letter: String, points: List<studio.airpen.app.gesture.Pt>) {
+        val key = letter.lowercase().trim().ifBlank { return }
+        if (points.size < 4) return
+        val resampled = studio.airpen.app.gesture.Unistroke.resample(points, 48)
+        val sample = LetterSample(key.take(2), resampled.map { it.x }, resampled.map { it.y })
+        update { s ->
+            val existing = s.letterSamples.filter { it.letter == key }
+            val kept = if (existing.size >= 8) s.letterSamples.filterNot { it.letter == key }.let {
+                it + existing.takeLast(7)
+            } else s.letterSamples
+            s.copy(letterSamples = (kept + sample).takeLast(80))
+        }
+        saveNow()
+    }
+
+    fun clearLetterSamples() {
+        update { it.copy(letterSamples = emptyList()) }
+        saveNow()
     }
 
     fun exportJson(): String = gson.toJson(current)
@@ -105,6 +121,26 @@ class AppStore(context: Context) {
                         p.copy(map = map)
                     }
                 } + if (hasReading) emptyList() else defaultProfiles().filter { it.id == "reading" },
+            )
+        }
+        if (next.version < 4) {
+            next = next.copy(
+                version = 4,
+                type = next.type.copy(
+                    minConfidence = kotlin.math.min(next.type.minConfidence, 0.40f),
+                    autoSpace = false,
+                    invertAirY = true,
+                ),
+                profiles = next.profiles.map { p ->
+                    if (p.id != "system") p
+                    else {
+                        val map = p.map.toMutableMap()
+                        if (map[GestureId.WAVE] == null) map[GestureId.WAVE] = BoundAction(ActionId.SHARE)
+                        if (map[GestureId.DIAMOND] == null) map[GestureId.DIAMOND] = BoundAction(ActionId.SCROLL_TOP)
+                        if (map[GestureId.HOOK] == null) map[GestureId.HOOK] = BoundAction(ActionId.CLOSE_APP)
+                        p.copy(map = map)
+                    }
+                },
             )
         }
         return next

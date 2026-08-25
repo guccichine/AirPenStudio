@@ -31,6 +31,14 @@ class SpenHub(private val appContext: Context) {
     var connectionListener: ((SpenStatus) -> Unit)? = null
 
     @Volatile var settings: GestureSettings = GestureSettings()
+    @Volatile var passAllMotion: Boolean = false
+        set(value) {
+            field = value
+            try {
+                (client as? SpenRemoteClient)?.passAllMotion = value
+            } catch (_: Throwable) {
+            }
+        }
 
     fun attachActivity(context: Context) {
         activityContext = context
@@ -61,6 +69,7 @@ class SpenHub(private val appContext: Context) {
             }
             activityContext?.let { c.attach(it) }
             c.settings = settings
+            c.passAllMotion = passAllMotion
             c.connect()
         } catch (t: Throwable) {
             Log.e(TAG, "connect / SDK load failed", t)

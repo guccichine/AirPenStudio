@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.PixelFormat
-import android.os.Build
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -17,26 +16,21 @@ object KeyboardOverlay {
 
     fun attach(context: Context, engine: AirPenEngine) {
         if (view != null) return
-        val window = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        wm = window
         val v = AirKeyboardView(context, engine)
-        val type = if (Build.VERSION.SDK_INT >= 26)
-            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
-        else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            type,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT,
         )
         lp.gravity = Gravity.BOTTOM
-        try {
-            window.addView(v, lp)
+        val handle = OverlayWindows.add(context, v, lp)
+        if (handle != null) {
             view = v
-        } catch (_: Throwable) {
+            wm = handle.wm
         }
     }
 

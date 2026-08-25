@@ -46,19 +46,18 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.7
-          name: AirPen Studio 1.0.7
+          tag_name: v1.0.8
+          name: AirPen Studio 1.0.8
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            **1.0.7** — flick up/down now scrolls **exactly one full page** (no extra fling).
-            S Pen stay-connected: the BLE session no longer drops a couple of seconds after you leave the app.
+            **1.0.8** — Air Type letter recognition overhaul, handwriting trainer, and many more gesture actions.
 
             **Uninstall any older AirPen Studio first**, then install this APK.
 
             1. Download **AirPenStudio.apk** below and install it.
-            2. Open AirPen Studio. Enable **Accessibility** and **Display over other apps**.
-            3. Tap **Connect S Pen**. You should see a persistent **Running in background** notification.
-            4. Tap **Allow background battery** (Samsung: Apps → AirPen Studio → Battery → Unrestricted).
-            5. **Settings → Advanced features → S Pen → Air actions** — turn Air actions **off** for Camera and other apps so they don't steal the pen.
-            6. Hold the S Pen side button and **flick up** / **flick down** — one page per flick.
+            2. Enable **Accessibility** and **Display over other apps**.
+            3. Tap **Connect S Pen**.
+            4. **Air Type:** Type tab → Start Air Type. Hold the side button and write a letter.
+            5. If a letter is wrong: Home → turn on **Recognize as letter**, draw it, tap the correct letter to train.
+            6. **Gestures** tab: search actions (YouTube, share, zoom, jump to top, Wi-Fi, …) and bind wave / diamond / hook too.

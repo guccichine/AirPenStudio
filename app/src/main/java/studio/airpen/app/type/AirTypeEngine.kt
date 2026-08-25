@@ -22,7 +22,11 @@ class AirTypeEngine {
         }
         var ch = raw
         if (ch.length == 1 && ch[0].isLetter()) {
-            ch = if (capsLock || shift) ch.uppercase() else ch.lowercase()
+            ch = when {
+                capsLock || shift -> ch.uppercase()
+                settings.autoCapitalize && buffer.isEmpty() -> ch.uppercase()
+                else -> ch.lowercase()
+            }
             if (shift && !capsLock) shift = false
         }
         buffer.append(ch)
@@ -69,6 +73,12 @@ class AirTypeEngine {
             "upload", "search", "google", "youtube", "chrome", "maps", "drive",
             "document", "folder", "password", "username", "address", "number",
             "morning", "evening", "night", "sorry", "welcome", "congratulations",
+            "airpen", "gesture", "scroll", "typing", "please", "thanks", "cheers",
+            "later", "soon", "really", "something", "someone", "everything",
+            "nothing", "always", "never", "maybe", "probably", "actually",
+            "between", "without", "through", "around", "family", "friend",
+            "work", "home", "school", "university", "brisbane", "australia",
+            "samsung", "galaxy", "spen", "android", "google",
         )
     }
 }

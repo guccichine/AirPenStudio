@@ -162,6 +162,87 @@ object Unistroke {
         return best to score
     }
 
+    fun densify(verts: List<Pt>, per: Int): List<Pt> {
+        if (verts.size < 2) return verts
+        val out = ArrayList<Pt>()
+        for (i in 0 until verts.size - 1) {
+            val a = verts[i]
+            val b = verts[i + 1]
+            for (k in 0 until per) {
+                val t = k / per.toFloat()
+                out += Pt(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.t)
+            }
+        }
+        out += verts.last()
+        return out
+    }
+
+    fun smooth(points: List<Pt>): List<Pt> {
+        if (points.size < 5) return points
+        val out = ArrayList<Pt>(points.size)
+        out += points.first()
+        for (i in 1 until points.size - 1) {
+            val a = points[i - 1]
+            val b = points[i]
+            val c = points[i + 1]
+            out += Pt(
+                (a.x + b.x * 2f + c.x) / 4f,
+                (a.y + b.y * 2f + c.y) / 4f,
+                b.t,
+            )
+        }
+        out += points.last()
+        return out
+    }
+
+    fun flipY(points: List<Pt>) = points.map { p -> Pt(p.x, -p.y, p.t) }
+
+    fun flipX(points: List<Pt>) = points.map { p -> Pt(-p.x, p.y, p.t) }
+
+    fun recognizeCloud(
+        points: List<Pt>,
+        templates: List<Template>,
+    ): Pair<Template, Float>? {
+        if (points.size < 5 || templates.isEmpty()) return null
+        val candidate = normalizeKeepAspect(resample(points, 32))
+        var best: Template? = null
+        var bestDist = Float.POSITIVE_INFINITY
+        for (t in templates) {
+            val tmpl = if (t.points.size == 32) t.points else normalizeKeepAspect(resample(t.points, 32))
+            val d = min(cloudDistance(candidate, tmpl), cloudDistance(tmpl, candidate))
+            if (d < bestDist) {
+                bestDist = d
+                best = t
+            }
+        }
+        best ?: return null
+        val score = (1f - bestDist / (0.5f * sqrt((SQUARE * SQUARE * 2).toDouble()).toFloat()))
+            .coerceIn(0f, 1f)
+        return best to score
+    }
+
+    private fun cloudDistance(a: List<Pt>, b: List<Pt>): Float {
+        val n = min(a.size, b.size)
+        if (n == 0) return Float.POSITIVE_INFINITY
+        val used = BooleanArray(n)
+        var sum = 0f
+        for (i in 0 until n) {
+            var best = Float.POSITIVE_INFINITY
+            var bestJ = 0
+            for (j in 0 until n) {
+                if (used[j]) continue
+                val d = distance(a[i], b[j])
+                if (d < best) {
+                    best = d
+                    bestJ = j
+                }
+            }
+            used[bestJ] = true
+            sum += best
+        }
+        return sum / n
+    }
+
     fun pathLength(points: List<Pt>): Float {
         var s = 0f
         for (i in 1 until points.size) s += distance(points[i - 1], points[i])

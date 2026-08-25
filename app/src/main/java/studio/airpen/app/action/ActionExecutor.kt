@@ -37,6 +37,7 @@ class ActionExecutor(private val appContext: Context) {
     var scrollDispatcher: ((Float, Float) -> Unit)? = null
     var textInjector: ((String) -> Unit)? = null
     var shiftToggler: (() -> Unit)? = null
+    var capsToggler: (() -> Unit)? = null
 
     private val main = Handler(Looper.getMainLooper())
     private var torchOn = false
@@ -89,6 +90,28 @@ class ActionExecutor(private val appContext: Context) {
             ActionId.SETTINGS_APP -> appContext.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             ActionId.CALCULATOR -> launchAction(Intent.ACTION_MAIN, "android.intent.category.APP_CALCULATOR")
             ActionId.CALENDAR -> launchAction(Intent.ACTION_MAIN, "android.intent.category.APP_CALENDAR")
+            ActionId.CONTACTS -> launchAction(Intent.ACTION_VIEW, data = "content://contacts/people/")
+            ActionId.GALLERY -> openFirst("com.sec.android.gallery3d", "com.google.android.apps.photos", "com.android.gallery3d")
+            ActionId.FILES -> openFirst("com.sec.android.app.myfiles", "com.google.android.apps.nbu.files", "com.android.documentsui")
+            ActionId.PLAY_STORE -> openFirst("com.android.vending")
+            ActionId.YOUTUBE -> openFirst("com.google.android.youtube")
+            ActionId.MAPS -> openFirst("com.google.android.apps.maps")
+            ActionId.GMAIL -> openFirst("com.google.android.gm")
+            ActionId.CHROME -> openFirst("com.android.chrome", "com.sec.android.app.sbrowser")
+            ActionId.SPOTIFY -> openFirst("com.spotify.music")
+            ActionId.WHATSAPP -> openFirst("com.whatsapp")
+            ActionId.INSTAGRAM -> openFirst("com.instagram.android")
+            ActionId.TIKTOK -> openFirst("com.zhiliaoapp.musically", "com.ss.android.ugc.trill")
+            ActionId.CLOCK -> openFirst("com.sec.android.app.clockpackage", "com.google.android.deskclock")
+            ActionId.NOTES -> openFirst("com.samsung.android.app.notes", "com.samsung.android.snote", "com.google.android.keep")
+            ActionId.DOWNLOADS -> openFirst("com.android.providers.downloads.ui", "com.samsung.android.downloads")
+            ActionId.WIFI_SETTINGS -> settingsPage(Settings.ACTION_WIFI_SETTINGS)
+            ActionId.BLUETOOTH_SETTINGS -> settingsPage(Settings.ACTION_BLUETOOTH_SETTINGS)
+            ActionId.NFC_SETTINGS -> settingsPage(Settings.ACTION_NFC_SETTINGS)
+            ActionId.SOUND_SETTINGS -> settingsPage(Settings.ACTION_SOUND_SETTINGS)
+            ActionId.DISPLAY_SETTINGS -> settingsPage(Settings.ACTION_DISPLAY_SETTINGS)
+            ActionId.BATTERY_SETTINGS -> settingsPage(Intent.ACTION_POWER_USAGE_SUMMARY)
+            ActionId.LOCATION_SETTINGS -> settingsPage(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
             ActionId.VOLUME_UP -> adjustVolume(AudioManager.ADJUST_RAISE)
             ActionId.VOLUME_DOWN -> adjustVolume(AudioManager.ADJUST_LOWER)
             ActionId.VOLUME_MUTE -> toggleMute()
@@ -114,6 +137,21 @@ class ActionExecutor(private val appContext: Context) {
             ActionId.SCROLL_RIGHT -> scrollOnePageHorizontal(flickLeft = false)
             ActionId.PAGE_UP -> scrollOnePage(flickUp = true)
             ActionId.PAGE_DOWN -> scrollOnePage(flickUp = false)
+            ActionId.SCROLL_TOP -> jumpScroll(toTop = true)
+            ActionId.SCROLL_BOTTOM -> jumpScroll(toTop = false)
+            ActionId.REFRESH -> pullRefresh()
+            ActionId.ZOOM_IN -> pinch(zoomIn = true)
+            ActionId.ZOOM_OUT -> pinch(zoomIn = false)
+            ActionId.SHARE -> shareCurrent()
+            ActionId.CLOSE_APP -> svc?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+            ActionId.DPAD_UP -> dpad(16)
+            ActionId.DPAD_DOWN -> dpad(17)
+            ActionId.DPAD_LEFT -> dpad(18)
+            ActionId.DPAD_RIGHT -> dpad(19)
+            ActionId.DPAD_CENTER -> dpad(20)
+            ActionId.DISMISS_SHADE -> if (Build.VERSION.SDK_INT >= 31) svc?.performGlobalAction(15)
+            ActionId.ACCESSIBILITY_ALL_APPS -> if (Build.VERSION.SDK_INT >= 31) svc?.performGlobalAction(14)
+            ActionId.MODE_GESTURE -> modeChanger?.invoke(AppMode.GESTURE)
             ActionId.MODE_GESTURE -> modeChanger?.invoke(AppMode.GESTURE)
             ActionId.MODE_MOUSE -> modeChanger?.invoke(AppMode.MOUSE)
             ActionId.MODE_TYPE -> modeChanger?.invoke(AppMode.TYPE)
@@ -137,6 +175,16 @@ class ActionExecutor(private val appContext: Context) {
             ActionId.TYPE_PERIOD -> injectText(".")
             ActionId.TYPE_COMMA -> injectText(",")
             ActionId.TYPE_QUESTION -> injectText("?")
+            ActionId.TYPE_EXCLAIM -> injectText("!")
+            ActionId.TYPE_AT -> injectText("@")
+            ActionId.TYPE_HASH -> injectText("#")
+            ActionId.TYPE_APOSTROPHE -> injectText("'")
+            ActionId.TYPE_QUOTE -> injectText("\"")
+            ActionId.TYPE_COLON -> injectText(":")
+            ActionId.TYPE_SLASH -> injectText("/")
+            ActionId.TYPE_DASH -> injectText("-")
+            ActionId.TYPE_CAPS_LOCK -> capsToggler?.invoke()
+            ActionId.TYPE_DELETE_WORD -> deleteWord()
             ActionId.KEY_COMBO -> combo(bound.arg)
             ActionId.SWITCH_PROFILE -> profileChanger?.invoke(bound.arg)
             ActionId.RUN_MACRO -> macroRunner?.invoke(bound.arg)
@@ -380,6 +428,86 @@ class ActionExecutor(private val appContext: Context) {
         if (category != null) i.addCategory(category)
         if (data != null) i.data = android.net.Uri.parse(data)
         runCatching { appContext.startActivity(i) }.onFailure { toast("Can't open ${it.message}") }
+    }
+
+    private fun openFirst(vararg pkgs: String) {
+        for (p in pkgs) {
+            val launch = appContext.packageManager.getLaunchIntentForPackage(p) ?: continue
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { appContext.startActivity(launch); return }
+        }
+        toast("App not installed")
+    }
+
+    private fun settingsPage(action: String) {
+        runCatching {
+            appContext.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }.onFailure { toast("Can't open settings") }
+    }
+
+    private fun jumpScroll(toTop: Boolean) {
+        repeat(5) { i ->
+            main.postDelayed({
+                lastPageAt = 0L
+                swipeOneViewport(vertical = true, flickPositive = toTop)
+            }, i * 200L)
+        }
+    }
+
+    private fun pullRefresh() {
+        val metrics = appContext.resources.displayMetrics
+        val w = metrics.widthPixels.toFloat()
+        val h = metrics.heightPixels.toFloat()
+        swipe(w / 2f, h * 0.22f, w / 2f, h * 0.72f, 420L)
+    }
+
+    private fun pinch(zoomIn: Boolean) {
+        val svc = AirPenAccessibilityService.instance ?: return
+        val metrics = appContext.resources.displayMetrics
+        val cx = metrics.widthPixels / 2f
+        val cy = metrics.heightPixels / 2f
+        val near = 48f
+        val far = 180f
+        val a0 = if (zoomIn) near else far
+        val a1 = if (zoomIn) far else near
+        val p1 = Path().apply { moveTo(cx - a0, cy); lineTo(cx - a1, cy) }
+        val p2 = Path().apply { moveTo(cx + a0, cy); lineTo(cx + a1, cy) }
+        val g = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(p1, 0, 280))
+            .addStroke(GestureDescription.StrokeDescription(p2, 0, 280))
+            .build()
+        svc.dispatchGesture(g, null, null)
+    }
+
+    private fun shareCurrent() {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, "")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        runCatching { appContext.startActivity(Intent.createChooser(send, "Share").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            .onFailure { toast("Share failed") }
+    }
+
+    private fun dpad(action: Int) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            AirPenAccessibilityService.instance?.performGlobalAction(action)
+        }
+    }
+
+    private fun deleteWord() {
+        val svc = AirPenAccessibilityService.instance ?: return
+        val node = svc.rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT) ?: return
+        val text = node.text?.toString().orEmpty()
+        if (text.isNotEmpty()) {
+            val trimmed = text.trimEnd()
+            val cut = trimmed.lastIndexOf(' ').let { if (it < 0) "" else trimmed.substring(0, it + 1) }
+            val args = android.os.Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, cut)
+            }
+            node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+        }
+        node.recycle()
     }
 
     private fun adjustVolume(dir: Int) {

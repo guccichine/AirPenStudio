@@ -137,6 +137,7 @@ class AirPenEngine(
             executor.clickDispatcher = { mouse.click(it) }
             executor.scrollDispatcher = { dx, dy -> mouse.scroll(dx, dy) }
             executor.shiftToggler = { typer.shift = !typer.shift }
+            executor.capsToggler = { typer.capsLock = !typer.capsLock; hud.show("Caps", if (typer.capsLock) "ON" else "off") }
             executor.textInjector = { /* accessibility path in executor */ }
             _live.value = "Tap Connect S Pen"
         }
@@ -249,6 +250,7 @@ class AirPenEngine(
         val g = store.current.gesture
         if (b.down) {
             hub.registerListeners()
+            hub.passAllMotion = true
             drawing = true
             stroke.clear()
             absX = 0f
@@ -262,6 +264,7 @@ class AirPenEngine(
             }
         } else {
             drawing = false
+            hub.passAllMotion = false
             main.removeCallbacks(longPress)
             val held = longPosted
             longPosted = false
@@ -285,12 +288,43 @@ class AirPenEngine(
     }
 
     fun feedPractice(points: List<studio.airpen.app.gesture.Pt>, typeMode: Boolean = false) {
-        val rec = recognizer.recognizeStroke(points, store.current.gesture, typeMode)
+        lastStroke = points
+        val rec = recognizer.recognizeStroke(
+            points,
+            store.current.gesture,
+            typeMode,
+            store.current.letterSamples,
+            typer.buffer.toString(),
+            store.current.type.minConfidence,
+        )
         handleRecognition(rec, typeMode)
     }
 
+    private var lastStroke: List<studio.airpen.app.gesture.Pt> = emptyList()
+
+    fun lastDrawn(): List<studio.airpen.app.gesture.Pt> = lastStroke
+
+    fun trainLastLetter(letter: String) {
+        if (lastStroke.size >= 4 && letter.isNotBlank()) {
+            store.addLetterSample(letter, lastStroke)
+            hud.show(letter, "trained")
+        }
+    }
+
     private fun finishStroke(typeMode: Boolean) {
-        val rec = recognizer.recognizeStroke(stroke.snapshot(), store.current.gesture, typeMode)
+        var pts = stroke.snapshot()
+        if (typeMode && store.current.type.invertAirY) {
+            pts = pts.map { it.copy(y = -it.y) }
+        }
+        lastStroke = pts
+        val rec = recognizer.recognizeStroke(
+            pts,
+            store.current.gesture,
+            typeMode,
+            store.current.letterSamples,
+            typer.buffer.toString(),
+            store.current.type.minConfidence,
+        )
         handleRecognition(rec, typeMode)
         stroke.clear()
     }
@@ -316,7 +350,8 @@ class AirPenEngine(
                         if (out.isNotEmpty()) executor.injectText(out)
                     }
                 }
-                hud.show(letter, "score ${(rec.score * 100).toInt()}%")
+                hud.show(letter, "score ${(rec.score * 100).toInt()}%" +
+                    rec.alternatives.drop(1).take(2).joinToString("") { " · ${it.first}" })
                 buzz(20)
                 return
             }

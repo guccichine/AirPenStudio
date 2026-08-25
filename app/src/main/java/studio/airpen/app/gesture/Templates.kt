@@ -36,6 +36,9 @@ object Templates {
         add(GestureId.PIGTAIL, "pigtail", pigtail())
         add(GestureId.BRACKET_LEFT, "bracket_l", bracket(true))
         add(GestureId.BRACKET_RIGHT, "bracket_r", bracket(false))
+        add(GestureId.WAVE, "wave", wave())
+        add(GestureId.DIAMOND, "diamond", diamond())
+        add(GestureId.HOOK, "hook", hook())
         return out
     }
 
@@ -134,6 +137,21 @@ object Templates {
         val x0 = if (left) 0.8f else 0.2f
         val x1 = if (left) 0.2f else 0.8f
         return densify(listOf(x0 to 1f, x1 to 1f, x1 to 0f, x0 to 0f), 12)
+    }
+
+    private fun wave(): List<Pt> {
+        val s = listOf(0f to 0.5f, 0.2f to 1f, 0.4f to 0.5f, 0.6f to 0f, 0.8f to 0.5f, 1f to 1f)
+        return densify(s, 10)
+    }
+
+    private fun diamond(): List<Pt> {
+        val s = listOf(0.5f to 1f, 1f to 0.5f, 0.5f to 0f, 0f to 0.5f, 0.5f to 1f)
+        return densify(s, 12)
+    }
+
+    private fun hook(): List<Pt> {
+        val s = listOf(0.15f to 1f, 0.15f to 0.2f, 0.45f to 0f, 0.8f to 0.25f)
+        return densify(s, 12)
     }
 
     private fun buildLetters(): List<Unistroke.Template> {

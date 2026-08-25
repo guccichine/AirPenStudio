@@ -30,6 +30,9 @@ enum class GestureId(val label: String, val symbol: String, val category: Gestur
     PIGTAIL("Pigtail", "§", GestureCategory.SHAPE),
     BRACKET_LEFT("Left bracket", "[", GestureCategory.SHAPE),
     BRACKET_RIGHT("Right bracket", "]", GestureCategory.SHAPE),
+    WAVE("Wave", "∿", GestureCategory.SHAPE),
+    DIAMOND("Diamond", "◇", GestureCategory.SHAPE),
+    HOOK("Hook", "J", GestureCategory.SHAPE),
     BUTTON_CLICK("Button click", "●", GestureCategory.BUTTON),
     BUTTON_DOUBLE("Button double-click", "●●", GestureCategory.BUTTON),
     BUTTON_TRIPLE("Button triple-click", "●●●", GestureCategory.BUTTON),
@@ -61,6 +64,28 @@ enum class ActionId(val label: String, val group: ActionGroup, val needsArg: Arg
     SETTINGS_APP("System settings", ActionGroup.APPS),
     CALCULATOR("Calculator", ActionGroup.APPS),
     CALENDAR("Calendar", ActionGroup.APPS),
+    CONTACTS("Contacts", ActionGroup.SHORTCUTS),
+    GALLERY("Gallery / Photos", ActionGroup.SHORTCUTS),
+    FILES("Files / My Files", ActionGroup.SHORTCUTS),
+    PLAY_STORE("Play Store", ActionGroup.SHORTCUTS),
+    YOUTUBE("YouTube", ActionGroup.SHORTCUTS),
+    MAPS("Maps", ActionGroup.SHORTCUTS),
+    GMAIL("Gmail", ActionGroup.SHORTCUTS),
+    CHROME("Chrome", ActionGroup.SHORTCUTS),
+    SPOTIFY("Spotify", ActionGroup.SHORTCUTS),
+    WHATSAPP("WhatsApp", ActionGroup.SHORTCUTS),
+    INSTAGRAM("Instagram", ActionGroup.SHORTCUTS),
+    TIKTOK("TikTok", ActionGroup.SHORTCUTS),
+    CLOCK("Clock / alarms", ActionGroup.SHORTCUTS),
+    NOTES("Notes", ActionGroup.SHORTCUTS),
+    DOWNLOADS("Downloads", ActionGroup.SHORTCUTS),
+    WIFI_SETTINGS("Wi-Fi settings", ActionGroup.SHORTCUTS),
+    BLUETOOTH_SETTINGS("Bluetooth settings", ActionGroup.SHORTCUTS),
+    NFC_SETTINGS("NFC settings", ActionGroup.SHORTCUTS),
+    SOUND_SETTINGS("Sound settings", ActionGroup.SHORTCUTS),
+    DISPLAY_SETTINGS("Display settings", ActionGroup.SHORTCUTS),
+    BATTERY_SETTINGS("Battery settings", ActionGroup.SHORTCUTS),
+    LOCATION_SETTINGS("Location settings", ActionGroup.SHORTCUTS),
     VOLUME_UP("Volume up", ActionGroup.MEDIA),
     VOLUME_DOWN("Volume down", ActionGroup.MEDIA),
     VOLUME_MUTE("Toggle mute", ActionGroup.MEDIA),
@@ -85,6 +110,20 @@ enum class ActionId(val label: String, val group: ActionGroup, val needsArg: Arg
     SCROLL_RIGHT("Scroll right", ActionGroup.MOUSE),
     PAGE_UP("Page up", ActionGroup.MOUSE),
     PAGE_DOWN("Page down", ActionGroup.MOUSE),
+    SCROLL_TOP("Jump to top", ActionGroup.MOUSE),
+    SCROLL_BOTTOM("Jump to bottom", ActionGroup.MOUSE),
+    REFRESH("Pull to refresh", ActionGroup.MOUSE),
+    ZOOM_IN("Zoom in", ActionGroup.MOUSE),
+    ZOOM_OUT("Zoom out", ActionGroup.MOUSE),
+    SHARE("Share", ActionGroup.NAVIGATION),
+    CLOSE_APP("Close current app", ActionGroup.NAVIGATION),
+    DPAD_UP("D-pad up", ActionGroup.NAVIGATION),
+    DPAD_DOWN("D-pad down", ActionGroup.NAVIGATION),
+    DPAD_LEFT("D-pad left", ActionGroup.NAVIGATION),
+    DPAD_RIGHT("D-pad right", ActionGroup.NAVIGATION),
+    DPAD_CENTER("D-pad center / OK", ActionGroup.NAVIGATION),
+    DISMISS_SHADE("Close notification shade", ActionGroup.NAVIGATION),
+    ACCESSIBILITY_ALL_APPS("All apps / launcher", ActionGroup.NAVIGATION),
     MODE_GESTURE("Switch to Gesture mode", ActionGroup.MODES),
     MODE_MOUSE("Switch to Air Mouse", ActionGroup.MODES),
     MODE_TYPE("Switch to Air Type", ActionGroup.MODES),
@@ -108,6 +147,16 @@ enum class ActionId(val label: String, val group: ActionGroup, val needsArg: Arg
     TYPE_PERIOD("Period", ActionGroup.TYPING),
     TYPE_COMMA("Comma", ActionGroup.TYPING),
     TYPE_QUESTION("Question mark", ActionGroup.TYPING),
+    TYPE_EXCLAIM("Exclamation mark", ActionGroup.TYPING),
+    TYPE_AT("At sign @", ActionGroup.TYPING),
+    TYPE_HASH("Hash #", ActionGroup.TYPING),
+    TYPE_APOSTROPHE("Apostrophe", ActionGroup.TYPING),
+    TYPE_QUOTE("Quote", ActionGroup.TYPING),
+    TYPE_COLON("Colon", ActionGroup.TYPING),
+    TYPE_SLASH("Slash", ActionGroup.TYPING),
+    TYPE_DASH("Dash", ActionGroup.TYPING),
+    TYPE_CAPS_LOCK("Toggle Caps Lock", ActionGroup.TYPING),
+    TYPE_DELETE_WORD("Delete last word", ActionGroup.TYPING),
     KEY_COMBO("Keyboard combo", ActionGroup.TYPING, ArgKind.KEYS),
     SWITCH_PROFILE("Switch profile", ActionGroup.MODES, ArgKind.PROFILE),
     RUN_MACRO("Run macro", ActionGroup.MODES, ArgKind.MACRO),
@@ -118,7 +167,7 @@ enum class ActionId(val label: String, val group: ActionGroup, val needsArg: Arg
     NOTIFICATION_EXPAND("Open first notification", ActionGroup.NAVIGATION),
 }
 
-enum class ActionGroup { SYSTEM, NAVIGATION, APPS, MEDIA, MOUSE, TYPING, MODES }
+enum class ActionGroup { SYSTEM, NAVIGATION, APPS, SHORTCUTS, MEDIA, MOUSE, TYPING, MODES }
 enum class ArgKind { NONE, TEXT, PACKAGE, KEYS, PROFILE, MACRO }
 
 data class BoundAction(val id: ActionId = ActionId.NONE, val arg: String = "")
@@ -126,11 +175,24 @@ data class Profile(val id: String, val name: String, val builtIn: Boolean = fals
 data class MacroStep(val action: BoundAction = BoundAction(), val delayMs: Long = 0)
 data class Macro(val id: String, val name: String, val steps: List<MacroStep> = emptyList(), val repeat: Int = 1)
 data class MouseSettings(val sensitivity: Float = 1.35f, val acceleration: Float = 1.8f, val smoothing: Float = 0.35f, val invertX: Boolean = false, val invertY: Boolean = false, val swapXY: Boolean = false, val cursorSizeDp: Float = 36f, val cursorStyle: String = "crosshair", val hideAfterMs: Long = 4000, val edgeBounce: Boolean = true, val clickOnRelease: Boolean = true, val dragThresholdPx: Float = 24f, val rightClickHoldMs: Long = 550, val scrollGain: Float = 1.4f, val precisionScale: Float = 0.28f, val showTrail: Boolean = true, val alwaysShowCursor: Boolean = false)
-data class TypeSettings(val engine: String = "hybrid", val autoSpace: Boolean = true, val autoCapitalize: Boolean = true, val suggestions: Boolean = true, val minConfidence: Float = 0.55f, val shiftOnFlickUp: Boolean = true, val keyboardScale: Float = 1f, val showGhostStroke: Boolean = true, val vibrateOnChar: Boolean = true)
+data class TypeSettings(
+    val engine: String = "hybrid",
+    val autoSpace: Boolean = false,
+    val autoCapitalize: Boolean = true,
+    val suggestions: Boolean = true,
+    val minConfidence: Float = 0.38f,
+    val shiftOnFlickUp: Boolean = true,
+    val keyboardScale: Float = 1f,
+    val showGhostStroke: Boolean = true,
+    val vibrateOnChar: Boolean = true,
+    val invertAirY: Boolean = true,
+    val tryAxisFlips: Boolean = true,
+)
+data class LetterSample(val letter: String = "a", val x: List<Float> = emptyList(), val y: List<Float> = emptyList())
 data class GestureSettings(val holdToDraw: Boolean = true, val requireButton: Boolean = true, val minStrokeMs: Long = 80, val maxStrokeMs: Long = 4000, val flickStraightness: Float = 0.78f, val minFlickLength: Float = 0.18f, val shapeThreshold: Float = 0.62f, val deadZone: Float = 0.012f, val sampleHz: Int = 90, val invertMotionX: Boolean = false, val invertMotionY: Boolean = false, val showHud: Boolean = true, val hudTimeoutMs: Long = 1200, val haptic: Boolean = true, val sounds: Boolean = true, val batterySaver: Boolean = true, val idleSleepMs: Long = 20_000)
 data class CameraSettings(val enabled: Boolean = false, val useFront: Boolean = true, val gain: Float = 1.6f, val mirror: Boolean = true)
 data class GeneralSettings(val startOnBoot: Boolean = false, val rememberMode: Boolean = true, val lastMode: AppMode = AppMode.GESTURE, val doubleClickMs: Long = 320, val longPressMs: Long = 520, val overlayOpacity: Float = 0.92f, val keepScreenOnWhenActive: Boolean = true, val notifyForeground: Boolean = true, val runInBackground: Boolean = true)
-data class AppState(val version: Int = 3, val activeProfileId: String = "system", val profiles: List<Profile> = defaultProfiles(), val macros: List<Macro> = defaultMacros(), val appProfileMap: Map<String, String> = emptyMap(), val mouse: MouseSettings = MouseSettings(), val type: TypeSettings = TypeSettings(), val gesture: GestureSettings = GestureSettings(), val camera: CameraSettings = CameraSettings(), val general: GeneralSettings = GeneralSettings())
+data class AppState(val version: Int = 4, val activeProfileId: String = "system", val profiles: List<Profile> = defaultProfiles(), val macros: List<Macro> = defaultMacros(), val appProfileMap: Map<String, String> = emptyMap(), val mouse: MouseSettings = MouseSettings(), val type: TypeSettings = TypeSettings(), val gesture: GestureSettings = GestureSettings(), val camera: CameraSettings = CameraSettings(), val general: GeneralSettings = GeneralSettings(), val letterSamples: List<LetterSample> = emptyList())
 
 fun defaultMacros(): List<Macro> = listOf(
     Macro("macro_goodnight", "Goodnight", listOf(MacroStep(BoundAction(ActionId.VOLUME_MUTE)), MacroStep(BoundAction(ActionId.DND_TOGGLE), 250), MacroStep(BoundAction(ActionId.LOCK_SCREEN), 400))),
@@ -157,6 +219,9 @@ fun defaultProfiles(): List<Profile> = listOf(
         GestureId.PLUS to BoundAction(ActionId.QUICK_SETTINGS),
         GestureId.HEART to BoundAction(ActionId.TYPE_TEXT, "❤️"),
         GestureId.INFINITY to BoundAction(ActionId.MODE_CYCLE),
+        GestureId.WAVE to BoundAction(ActionId.SHARE),
+        GestureId.DIAMOND to BoundAction(ActionId.SCROLL_TOP),
+        GestureId.HOOK to BoundAction(ActionId.CLOSE_APP),
         GestureId.BUTTON_CLICK to BoundAction(ActionId.MOUSE_CLICK),
         GestureId.BUTTON_DOUBLE to BoundAction(ActionId.MODE_MOUSE),
         GestureId.BUTTON_TRIPLE to BoundAction(ActionId.MODE_TYPE),

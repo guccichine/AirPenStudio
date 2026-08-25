@@ -166,6 +166,19 @@ private fun PracticePad() {
             }
             Text("Draw here", color = Color.White.copy(alpha = 0.35f), modifier = Modifier.align(Alignment.Center))
         }
+        val last by AirPen.engine.lastRecognition.collectAsState()
+        if (typeMode && last.alternatives.isNotEmpty()) {
+            Text("Was it… tap to train your handwriting", fontSize = 13.sp, color = Gold, modifier = Modifier.padding(top = 8.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                last.alternatives.take(4).forEach { (ch, score) ->
+                    FilterChip(
+                        selected = ch == last.letter,
+                        onClick = { AirPen.engine.trainLastLetter(ch) },
+                        label = { Text("$ch  ${(score * 100).toInt()}%") },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -190,6 +203,7 @@ private fun MouseScreen() {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TypeScreen() {
     val state by AirPen.store.state.collectAsState()
@@ -203,8 +217,30 @@ private fun TypeScreen() {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("hybrid", "write", "keyboard").forEach { s -> FilterChip(selected = t.engine == s, onClick = { upd { copy(engine = s) } }, label = { Text(s) }) }
         }
+        SliderRow("Letter confidence", t.minConfidence, 0.25f..0.70f) { upd { copy(minConfidence = it) } }
+        SwitchRow("Invert air-write Y (S Pen IMU)", t.invertAirY) { upd { copy(invertAirY = it) } }
+        SwitchRow("Auto-capitalise", t.autoCapitalize) { upd { copy(autoCapitalize = it) } }
         SwitchRow("Word suggestions", t.suggestions) { upd { copy(suggestions = it) } }
-        Text("Hold the button and write a letter. Flicks: ← backspace  → space  ↓ enter  ↑ shift")
+        Text("Hold the side button and write a letter in the air. Flick ← backspace  → space  ↓ enter  ↑ shift.", fontSize = 13.sp)
+        Text("If a letter is wrong, turn on “Recognize as letter” on the Home practice pad, draw it, then tap the correct letter so AirPen learns your handwriting.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
+        val samples = state.letterSamples.size
+        Text("Trained samples: $samples", color = Gold)
+        OutlinedButton(onClick = { AirPen.store.clearLetterSamples() }, modifier = Modifier.fillMaxWidth()) { Text("Clear trained letters") }
+        val last by AirPen.engine.lastRecognition.collectAsState()
+        if (last.letter != null && last.letter !in listOf("⌫", " ", "\n", "⇧")) {
+            Text("Last guess: ${last.letter}  ${(last.score * 100).toInt()}%", fontWeight = FontWeight.Medium)
+            Text("Tap the real letter to train it")
+            val alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                alphabet.forEach { ch ->
+                    FilterChip(
+                        selected = ch.toString() == last.letter,
+                        onClick = { AirPen.engine.trainLastLetter(ch.toString()) },
+                        label = { Text(ch.toString()) },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -307,9 +343,10 @@ private fun AppsPage(activity: MainActivity) {
 @Composable
 private fun AboutPage() {
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("AirPen Studio", style = MaterialTheme.typography.headlineMedium)
+        Text("AirPen Studio 1.0.8", style = MaterialTheme.typography.headlineMedium)
         Text("S Pen customisation for air gestures, distant air-mouse, and air typing.")
-        Text("Flick up scrolls the screen up. Flick down scrolls the screen down. Remap any gesture in the Gestures tab.")
+        Text("Flick up/down scrolls one page. Wave / diamond / hook are extra shapes. Gestures tab: search any action.")
+        Text("Air Type: hold the side button and write a letter. Train your handwriting on the Home practice pad.")
         Text("On S22 Ultra: enable Accessibility + Appear on top, disable Samsung Air actions for other apps, pull the S Pen out.")
     }
 }

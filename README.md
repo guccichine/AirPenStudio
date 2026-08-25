@@ -20,7 +20,9 @@ Samsung and S Pen are trademarks of Samsung Electronics. This project is not aff
 - **Flick to scroll (exactly one page):** hold the side button, flick **up** or **down**. Each flick moves **one full page** in that direction and stops — no extra fling. Works in Chrome, feeds, Settings, any app.
 - **Button:** click, double-click, triple-click, long-press — each remappable.
 - **Air mouse:** S Pen IMU moves an on-screen cursor (up to ~10 m). Click, double-click, long-press, drag, scroll, precision mode.
-- **Air type:** write letters in the air, or point at a floating QWERTY and click. Flicks: ← backspace, → space, ↓ enter, ↑ shift.
+- **Air type:** write letters in the air (now with $1 + point-cloud matching, extra templates, next-letter boost, and a handwriting trainer). Flicks: ← backspace, → space, ↓ enter, ↑ shift. Or point at a floating QWERTY.
+- **More gesture actions:** YouTube, Maps, Chrome, WhatsApp, share, zoom, jump to top/bottom, pull-to-refresh, D-pad, Wi-Fi/Bluetooth settings, notes, gallery, and more. Search them in the Gestures tab.
+- **New shapes:** wave, diamond, hook.
 - **Camera tracking:** fallback mouse for S Pens that dropped BLE (S25 Ultra and later). Track a bright tip in the camera.
 - **Profiles:** System, Reading, Media, Typing, plus your own. Per-app profile switching.
 - **Macros, HUD, haptics, invert axes, dead zone, sensitivity, export/import JSON.**

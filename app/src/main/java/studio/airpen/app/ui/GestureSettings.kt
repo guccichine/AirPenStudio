@@ -98,6 +98,7 @@ private fun GestureActionPicker(gesture: GestureId, onSaved: () -> Unit, onClose
     var group by remember { mutableStateOf(current.id.group) }
     var arg by remember { mutableStateOf(current.arg) }
     var selected by remember { mutableStateOf(current.id) }
+    var query by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).clickable { onClose() }) {
         Card(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(560.dp),
@@ -112,13 +113,27 @@ private fun GestureActionPicker(gesture: GestureId, onSaved: () -> Unit, onClose
                     }
                 }
                 OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text("Search actions") },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+                OutlinedTextField(
                     value = arg,
                     onValueChange = { arg = it },
                     label = { Text("Argument (app package, URL, text, combo)") },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 )
                 LazyColumn(Modifier.weight(1f)) {
-                    items(ActionId.entries.filter { it.group == group }) { a ->
+                    val q = query.trim()
+                    val list = if (q.isEmpty()) {
+                        ActionId.entries.filter { it.group == group }
+                    } else {
+                        ActionId.entries.filter {
+                            it.label.contains(q, ignoreCase = true) || it.name.contains(q, ignoreCase = true)
+                        }
+                    }
+                    items(list) { a ->
                         Text(
                             a.label,
                             color = if (selected == a) Gold else MaterialTheme.colorScheme.onSurface,

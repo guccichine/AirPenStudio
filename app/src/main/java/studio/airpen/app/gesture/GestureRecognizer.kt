@@ -2,6 +2,7 @@ package studio.airpen.app.gesture
 
 import studio.airpen.app.data.GestureId
 import studio.airpen.app.data.GestureSettings
+import studio.airpen.app.data.LetterSample
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.hypot
@@ -13,6 +14,7 @@ data class Recognition(
     val headingDeg: Float = 0f,
     val closed: Boolean = false,
     val notes: String = "",
+    val alternatives: List<Pair<String, Float>> = emptyList(),
 )
 
 class GestureRecognizer {
@@ -20,6 +22,9 @@ class GestureRecognizer {
         points: List<Pt>,
         settings: GestureSettings,
         typeMode: Boolean = false,
+        userSamples: List<LetterSample> = emptyList(),
+        prefix: String = "",
+        minLetter: Float = 0.40f,
     ): Recognition {
         if (points.size < 4) return Recognition(notes = "too-short")
         val len = Unistroke.pathLength(points)
@@ -60,9 +65,17 @@ class GestureRecognizer {
                     return Recognition(gesture = GestureId.FLICK_RIGHT, letter = " ", score = straight, headingDeg = deg, notes = "sp")
                 }
             }
-            val match = Unistroke.recognizeOriented(points, Templates.allType)
-            if (match != null && match.second >= settings.minLet()) {
-                return Recognition(letter = match.first.name, score = match.second, headingDeg = deg, closed = closed, notes = "letter")
+            val ranked = LetterRecognizer.ranked(points, userSamples, prefix, minLetter)
+            val top = ranked.firstOrNull()
+            if (top != null && top.score >= minLetter) {
+                return Recognition(
+                    letter = top.letter,
+                    score = top.score,
+                    headingDeg = deg,
+                    closed = closed,
+                    notes = "letter",
+                    alternatives = ranked.map { it.letter to it.score },
+                )
             }
             val ay = kotlin.math.abs(kotlin.math.sin(heading.toDouble())).toFloat()
             val verticalDart = straight >= 0.90f && ay > 0.85f && end >= settings.minFlickLength * 0.7f
@@ -73,7 +86,12 @@ class GestureRecognizer {
                     Recognition(gesture = GestureId.FLICK_DOWN, letter = "\n", score = straight, headingDeg = deg, notes = "nl")
                 }
             }
-            return Recognition(score = match?.second ?: 0f, headingDeg = deg, notes = if (match == null) "no-letter" else "low-letter")
+            return Recognition(
+                score = top?.score ?: 0f,
+                headingDeg = deg,
+                notes = if (top == null) "no-letter" else "low-letter",
+                alternatives = ranked.map { it.letter to it.score },
+            )
         }
 
         if (closed && circ >= 0.72f && abs(turns) >= 0.55f) {
@@ -96,6 +114,9 @@ class GestureRecognizer {
         }
         if (closed && circ in 0.35f..0.7f) {
             return Recognition(gesture = GestureId.TRIANGLE, score = circ, headingDeg = deg, closed = true, notes = "geo-tri")
+        }
+        if (closed && aspect > 0.55f && circ in 0.28f..0.55f) {
+            return Recognition(gesture = GestureId.DIAMOND, score = aspect, headingDeg = deg, closed = true, notes = "geo-diamond")
         }
 
         if (straight >= settings.flickStraightness * 0.9f && len >= settings.minFlickLength) {
@@ -124,6 +145,4 @@ class GestureRecognizer {
         if (d > PI.toFloat()) d = 2f * PI.toFloat() - d
         return d
     }
-
-    private fun GestureSettings.minLet(): Float = 0.46f
 }
