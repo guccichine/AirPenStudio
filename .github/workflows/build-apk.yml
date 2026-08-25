@@ -46,12 +46,13 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.6
-          name: AirPen Studio 1.0.6
+          tag_name: v1.0.7
+          name: AirPen Studio 1.0.7
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            Flick up / flick down now scroll the screen — in Chrome, feeds, Settings, anywhere Accessibility can swipe.
+            **1.0.7** — flick up/down now scrolls **exactly one full page** (no extra fling).
+            S Pen stay-connected: the BLE session no longer drops a couple of seconds after you leave the app.
 
             **Uninstall any older AirPen Studio first**, then install this APK.
 
@@ -59,7 +60,5 @@ jobs:
             2. Open AirPen Studio. Enable **Accessibility** and **Display over other apps**.
             3. Tap **Connect S Pen**. You should see a persistent **Running in background** notification.
             4. Tap **Allow background battery** (Samsung: Apps → AirPen Studio → Battery → Unrestricted).
-            5. Hold the S Pen side button and **flick up** to scroll up, **flick down** to scroll down.
-            6. Gestures tab: remap any flick if you want Home / notifications back.
-
-            Existing installs keep custom mappings. If flick up was still Home, this update remaps it to scroll.
+            5. **Settings → Advanced features → S Pen → Air actions** — turn Air actions **off** for Camera and other apps so they don't steal the pen.
+            6. Hold the S Pen side button and **flick up** / **flick down** — one page per flick.

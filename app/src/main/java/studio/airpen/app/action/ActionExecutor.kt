@@ -7,6 +7,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Path
+import android.graphics.Rect
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.os.Build
@@ -40,6 +41,7 @@ class ActionExecutor(private val appContext: Context) {
     private val main = Handler(Looper.getMainLooper())
     private var torchOn = false
     private var muted = false
+    private var lastPageAt = 0L
 
     enum class ClickKind { LEFT, DOUBLE, RIGHT, DRAG_TOGGLE }
 
@@ -105,13 +107,13 @@ class ActionExecutor(private val appContext: Context) {
             ActionId.MOUSE_DOUBLE -> clickDispatcher?.invoke(ClickKind.DOUBLE)
             ActionId.MOUSE_RIGHT -> clickDispatcher?.invoke(ClickKind.RIGHT)
             ActionId.MOUSE_DRAG_TOGGLE -> clickDispatcher?.invoke(ClickKind.DRAG_TOGGLE)
-            // Full-page scrolls: direction follows the air gesture; distance is ~1 full viewport
-            ActionId.SCROLL_UP -> scrollScreen(0f, -2.5f)
-            ActionId.SCROLL_DOWN -> scrollScreen(0f, 2.5f)
-            ActionId.SCROLL_LEFT -> scrollScreen(-1f, 0f)
-            ActionId.SCROLL_RIGHT -> scrollScreen(1f, 0f)
-            ActionId.PAGE_UP -> scrollScreen(0f, -2.5f)
-            ActionId.PAGE_DOWN -> scrollScreen(0f, 2.5f)
+            // Exactly one viewport in the air-gesture direction. No extra fling.
+            ActionId.SCROLL_UP -> scrollOnePage(flickUp = true)
+            ActionId.SCROLL_DOWN -> scrollOnePage(flickUp = false)
+            ActionId.SCROLL_LEFT -> scrollOnePageHorizontal(flickLeft = true)
+            ActionId.SCROLL_RIGHT -> scrollOnePageHorizontal(flickLeft = false)
+            ActionId.PAGE_UP -> scrollOnePage(flickUp = true)
+            ActionId.PAGE_DOWN -> scrollOnePage(flickUp = false)
             ActionId.MODE_GESTURE -> modeChanger?.invoke(AppMode.GESTURE)
             ActionId.MODE_MOUSE -> modeChanger?.invoke(AppMode.MOUSE)
             ActionId.MODE_TYPE -> modeChanger?.invoke(AppMode.TYPE)
@@ -176,32 +178,129 @@ class ActionExecutor(private val appContext: Context) {
     }
 
     /**
-     * Flick-driven scroll. dirY < 0 is flick up (finger swipe up — content moves up).
-     * Centre-screen Accessibility swipe so it works in Chrome, feeds, Settings, any app.
-     * Magnitude controls distance: ~1.0 = partial, >=2.0 = full-page (up to ~90% of viewport).
+     * Flick-driven scroll. dirY < 0 is flick up (finger swipe up — later content).
+     * Always exactly one page — Accessibility PAGE/SCROLL action, else one viewport drag
+     * slow enough that the system will not fling extra pages.
      */
     fun scrollScreen(dirX: Float, dirY: Float) {
+        val vertical = kotlin.math.abs(dirY) >= kotlin.math.abs(dirX)
+        if (vertical) scrollOnePage(flickUp = dirY < 0) else scrollOnePageHorizontal(flickLeft = dirX < 0)
+    }
+
+    private fun scrollOnePage(flickUp: Boolean) {
         if (AirPenAccessibilityService.instance == null) {
             toast("Turn on Accessibility so AirPen can scroll")
             return
         }
-        swipeScroll(dirX, dirY)
+        val now = SystemClock.uptimeMillis()
+        if (now - lastPageAt < 300L) return
+        lastPageAt = now
+        if (pageViaNode(vertical = true, flickPositive = flickUp)) return
+        swipeOneViewport(vertical = true, flickPositive = flickUp)
     }
 
-    private fun swipeScroll(dirX: Float, dirY: Float) {
+    private fun scrollOnePageHorizontal(flickLeft: Boolean) {
+        if (AirPenAccessibilityService.instance == null) {
+            toast("Turn on Accessibility so AirPen can scroll")
+            return
+        }
+        val now = SystemClock.uptimeMillis()
+        if (now - lastPageAt < 300L) return
+        lastPageAt = now
+        if (pageViaNode(vertical = false, flickPositive = flickLeft)) return
+        swipeOneViewport(vertical = false, flickPositive = flickLeft)
+    }
+
+    private fun pageViaNode(vertical: Boolean, flickPositive: Boolean): Boolean {
+        val svc = AirPenAccessibilityService.instance ?: return false
+        val root = svc.rootInActiveWindow ?: return false
+        try {
+            val pageId = pageActionId(vertical, flickPositive)
+            val scrollId = if (flickPositive) {
+                AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+            } else {
+                AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+            }
+            val focused = root.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY)
+                ?: root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+            if (focused != null) {
+                try {
+                    if (tryPageActions(focused, pageId)) return true
+                } finally {
+                    focused.recycle()
+                }
+            }
+            val node = findBestScrollable(root, pageId, scrollId) ?: return false
+            try {
+                return tryPageActions(node, pageId)
+            } finally {
+                node.recycle()
+            }
+        } catch (t: Throwable) {
+            return false
+        } finally {
+            root.recycle()
+        }
+    }
+
+    private fun pageActionId(vertical: Boolean, flickPositive: Boolean): Int {
+        if (Build.VERSION.SDK_INT < 29) return 0
+        val action = when {
+            vertical && flickPositive -> AccessibilityNodeInfo.AccessibilityAction.ACTION_PAGE_DOWN
+            vertical && !flickPositive -> AccessibilityNodeInfo.AccessibilityAction.ACTION_PAGE_UP
+            !vertical && flickPositive -> AccessibilityNodeInfo.AccessibilityAction.ACTION_PAGE_RIGHT
+            else -> AccessibilityNodeInfo.AccessibilityAction.ACTION_PAGE_LEFT
+        }
+        return action.id
+    }
+
+    private fun tryPageActions(node: AccessibilityNodeInfo, pageId: Int): Boolean {
+        // PAGE_* is a real viewport. ACTION_SCROLL_* is often one list item — skip it.
+        if (pageId != 0 && node.actionList.any { it.id == pageId }) {
+            if (node.performAction(pageId)) return true
+        }
+        return false
+    }
+
+    private fun findBestScrollable(root: AccessibilityNodeInfo, pageId: Int, scrollId: Int): AccessibilityNodeInfo? {
+        var best: AccessibilityNodeInfo? = null
+        var bestArea = 0
+        val rect = Rect()
+        fun walk(n: AccessibilityNodeInfo) {
+            val can = n.isScrollable ||
+                n.actionList.any { it.id == scrollId || (pageId != 0 && it.id == pageId) }
+            if (can) {
+                n.getBoundsInScreen(rect)
+                val area = rect.width() * rect.height()
+                if (area > bestArea) {
+                    best?.recycle()
+                    best = AccessibilityNodeInfo.obtain(n)
+                    bestArea = area
+                }
+            }
+            for (i in 0 until n.childCount) {
+                val c = n.getChild(i) ?: continue
+                walk(c)
+                c.recycle()
+            }
+        }
+        walk(root)
+        return best
+    }
+
+    /**
+     * One full viewport drag. Long duration so velocity stays below the fling
+     * threshold — otherwise Chrome / RecyclerView skip extra pages.
+     * flickPositive (up / left) = finger moves toward the start of the axis.
+     */
+    private fun swipeOneViewport(vertical: Boolean, flickPositive: Boolean) {
         val metrics = appContext.resources.displayMetrics
         val w = metrics.widthPixels.toFloat()
         val h = metrics.heightPixels.toFloat()
-        val absX = kotlin.math.abs(dirX)
-        val absY = kotlin.math.abs(dirY)
-        val vertical = absY >= absX
-        val mag = (if (vertical) absY else absX).coerceAtLeast(1f)
-        // Higher magnitude now produces near-full-page swipes (up to 90% of screen)
-        val span = (if (vertical) h else w) * (0.40f * mag.coerceAtMost(2.5f)).coerceIn(0.30f, 0.90f)
-        val pad = 48f
+        val padV = h * 0.10f
+        val padH = w * 0.10f
         val cx = w / 2f
-        val cy = h * 0.52f
-        val half = span / 2f
+        val cy = h * 0.50f
         val x1: Float
         val y1: Float
         val x2: Float
@@ -209,27 +308,25 @@ class ActionExecutor(private val appContext: Context) {
         if (vertical) {
             x1 = cx
             x2 = cx
-            if (dirY < 0) {
-                y1 = (cy + half).coerceIn(pad, h - pad)
-                y2 = (cy - half).coerceIn(pad, h - pad)
+            if (flickPositive) {
+                y1 = h - padV
+                y2 = padV
             } else {
-                y1 = (cy - half).coerceIn(pad, h - pad)
-                y2 = (cy + half).coerceIn(pad, h - pad)
+                y1 = padV
+                y2 = h - padV
             }
         } else {
             y1 = cy
             y2 = cy
-            if (dirX < 0) {
-                x1 = (cx + half).coerceIn(pad, w - pad)
-                x2 = (cx - half).coerceIn(pad, w - pad)
+            if (flickPositive) {
+                x1 = w - padH
+                x2 = padH
             } else {
-                x1 = (cx - half).coerceIn(pad, w - pad)
-                x2 = (cx + half).coerceIn(pad, w - pad)
+                x1 = padH
+                x2 = w - padH
             }
         }
-        // Slightly longer duration for the larger full-page gesture so it feels natural
-        val duration = if (mag >= 2.0f) 380L else 300L
-        swipe(x1, y1, x2, y2, duration)
+        swipe(x1, y1, x2, y2, 560L)
     }
 
     fun longPressAt(x: Float, y: Float, holdMs: Long = 700L) {

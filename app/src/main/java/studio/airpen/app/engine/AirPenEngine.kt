@@ -22,6 +22,7 @@ import studio.airpen.app.gesture.Recognition
 import studio.airpen.app.gesture.StrokeBuffer
 import studio.airpen.app.mouse.AirMouseController
 import studio.airpen.app.overlay.HudController
+import studio.airpen.app.overlay.KeepAliveOverlay
 import studio.airpen.app.overlay.KeyboardOverlay
 import studio.airpen.app.spen.PenButton
 import studio.airpen.app.spen.PenMotion
@@ -61,7 +62,19 @@ class AirPenEngine(
     private var lastMotionAt = 0L
     private val clickReset = Runnable { flushClicks() }
     private val longPress = Runnable { onLongPress() }
-    private val idleSleep = Runnable { hub.unregisterMotion() }
+    private val idleSleep = Runnable {
+        if (store.current.general.runInBackground) return@Runnable
+        if (hub.status.value == SpenStatus.CONNECTED) return@Runnable
+        hub.unregisterMotion()
+    }
+    private val reconnectPen = Runnable {
+        if (!store.current.general.runInBackground) return@Runnable
+        try {
+            hub.connect()
+        } catch (t: Throwable) {
+            Log.w(TAG, "reconnect", t)
+        }
+    }
 
     @Volatile private var wired = false
 
@@ -90,10 +103,23 @@ class AirPenEngine(
                 _live.value = when (st) {
                     SpenStatus.CONNECTED -> "S Pen connected"
                     SpenStatus.UNSUPPORTED -> "S Pen remote not on this device — use the Practice pad"
-                    SpenStatus.ERROR -> "S Pen connection error — tap Connect again with the pen out"
+                    SpenStatus.ERROR -> "S Pen connection error — reconnecting…"
                     SpenStatus.CONNECTING -> "Connecting…"
                     SpenStatus.DISCONNECTED -> "S Pen disconnected"
                     SpenStatus.UNKNOWN -> "Tap Connect S Pen"
+                }
+                when (st) {
+                    SpenStatus.CONNECTED -> {
+                        KeepAliveOverlay.show(context)
+                        hub.registerListeners()
+                    }
+                    SpenStatus.DISCONNECTED, SpenStatus.ERROR -> {
+                        if (store.current.general.runInBackground) {
+                            main.removeCallbacks(reconnectPen)
+                            main.postDelayed(reconnectPen, 800L)
+                        }
+                    }
+                    else -> Unit
                 }
             }
             executor.modeChanger = { setMode(it) }
@@ -370,8 +396,9 @@ class AirPenEngine(
     }
 
     private fun scheduleIdle() {
-        if (!store.current.gesture.batterySaver) return
+        // Never drop air-motion while the S Pen should stay connected.
         if (store.current.general.runInBackground) return
+        if (!store.current.gesture.batterySaver) return
         main.removeCallbacks(idleSleep)
         main.postDelayed(idleSleep, store.current.gesture.idleSleepMs)
     }

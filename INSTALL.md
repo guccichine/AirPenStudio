@@ -5,7 +5,7 @@ The S22 Ultra has a BLE S Pen with air motion. This is the right phone for AirPe
 ## Fastest path
 
 1. On the phone, open: **https://github.com/guccichine/AirPenStudio/releases**
-2. Under **AirPen Studio 1.0.0**, tap **AirPenStudio.apk** and download it.
+2. Under **AirPen Studio 1.0.7**, tap **AirPenStudio.apk** and download it.
 3. Open the downloaded file (Files or Chrome). Allow install from that app if Samsung asks.
 4. Open **AirPen Studio**.
 
@@ -21,7 +21,7 @@ If the Releases page is empty, GitHub is still building. Wait a couple of minute
 
 ## Use it
 
-- **Gesture:** hold the side button, **flick up / down to scroll the screen**, or draw left/right/diagonal / a circle/square/triangle, then release.
+- **Gesture:** hold the side button, **flick up / down to scroll exactly one page**, or draw left/right/diagonal / a circle/square/triangle, then release.
 - **Mouse:** wave the pen; the cursor follows. Click the side button to tap.
 - **Type:** hold the button and write a letter in the air, or point at the floating keyboard.
 

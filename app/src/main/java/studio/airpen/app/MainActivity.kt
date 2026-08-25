@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
         if (!AirPen.isReady) return
         try {
             AirPen.hub.attachActivity(this)
+            AirPen.hub.keepAlive()
             val mode = AirPen.engine.mode
             if (mode == studio.airpen.app.data.AppMode.MOUSE ||
                 mode == studio.airpen.app.data.AppMode.POINTER ||
@@ -81,11 +82,15 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         if (!AirPen.isReady) return
         try {
-            // Hand the S Pen SDK an Application context so leaving the UI
-            // does not tear the BLE session down with the activity.
-            AirPen.hub.attachActivity(applicationContext)
+            // Keep the Activity token — Samsung's SDK binds the BLE session to
+            // whatever Context called connect(). Swapping it for Application
+            // here is what dropped the pen after a couple of seconds.
+            if (isFinishing) {
+                AirPen.hub.attachActivity(applicationContext)
+            }
             if (AirPen.store.current.general.runInBackground) {
                 AirPenBackground.start(this)
+                AirPen.hub.keepAlive()
             }
         } catch (t: Throwable) {
             Log.e(TAG, "onStop", t)
@@ -95,6 +100,9 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         if (AirPen.isReady) {
             runCatching { AirPen.hub.attachActivity(applicationContext) }
+            if (!isChangingConfigurations && AirPen.store.current.general.runInBackground) {
+                runCatching { AirPen.hub.keepAlive() }
+            }
         }
         super.onDestroy()
     }

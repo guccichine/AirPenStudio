@@ -31,6 +31,7 @@ class AirPenForegroundService : Service() {
             AirPen.ensure(applicationContext)
             if (AirPen.isReady) {
                 AirPen.engine.start(connectPen = true)
+                AirPen.hub.keepAlive()
             }
         } catch (t: Throwable) {
             Log.e(TAG, "keep-alive", t)

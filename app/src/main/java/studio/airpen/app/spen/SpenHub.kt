@@ -79,6 +79,15 @@ class SpenHub(private val appContext: Context) {
         _status.value = SpenStatus.DISCONNECTED
     }
 
+    fun keepAlive() {
+        try {
+            val existing = client ?: return
+            (existing as SpenRemoteClient).keepAlive()
+        } catch (t: Throwable) {
+            Log.w(TAG, "keepAlive", t)
+        }
+    }
+
     fun registerListeners() {
         try {
             val existing = client ?: return
