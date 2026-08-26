@@ -46,17 +46,24 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.9
-          name: AirPen Studio 1.0.9
+          tag_name: v1.1.0
+          name: AirPen Studio 1.1.0
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            **1.0.9** — STOP button (Home, overlay, notification). Air typing removed.
+            **1.1.0** — Gesture pickup fix. More customisation. More actions. Air typing stays gone.
+
+            Gestures now auto-arm on motion if the side-button event is missed. Short, fast flicks count. Sensitivity, dead zone, invert, and min flick length are in More → settings.
+
+            New shapes: L, U, lightning, semicircle, question.
+            New actions: tabs, half-page, find, bookmark, Telegram, Netflix, Drive, Translate, timer, wallet, and more.
+            New profiles: Gaming, Night.
 
             **Uninstall any older AirPen Studio first**, then install this APK.
 
             1. Download **AirPenStudio.apk** below and install it.
             2. Enable **Accessibility** and **Display over other apps**.
-            3. Tap **Connect S Pen**.
-            4. **STOP** on Home, the floating overlay, or the notification cuts the session immediately.
-            5. **Gestures** tab: search actions (YouTube, share, zoom, jump to top, Wi-Fi, …) and bind wave / diamond / hook too.
+            3. Turn Samsung **Air actions** off for Camera and other apps.
+            4. Tap **Connect S Pen**.
+            5. Flick up / down to scroll one page. **STOP** cuts the session immediately.
+            6. **Gestures** tab: tap a gesture, search an action, Save.
