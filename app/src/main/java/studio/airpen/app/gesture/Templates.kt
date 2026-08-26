@@ -39,6 +39,11 @@ object Templates {
         add(GestureId.WAVE, "wave", wave())
         add(GestureId.DIAMOND, "diamond", diamond())
         add(GestureId.HOOK, "hook", hook())
+        add(GestureId.L_SHAPE, "l_shape", lShape())
+        add(GestureId.U_SHAPE, "u_shape", uShape())
+        add(GestureId.LIGHTNING, "lightning", lightning())
+        add(GestureId.SEMICIRCLE, "semicircle", semicircle())
+        add(GestureId.QUESTION, "question", question())
         return out
     }
 
@@ -152,6 +157,30 @@ object Templates {
     private fun hook(): List<Pt> {
         val s = listOf(0.15f to 1f, 0.15f to 0.2f, 0.45f to 0f, 0.8f to 0.25f)
         return densify(s, 12)
+    }
+
+    private fun lShape(): List<Pt> {
+        return densify(listOf(0f to 1f, 0f to 0f, 1f to 0f), 16)
+    }
+
+    private fun uShape(): List<Pt> {
+        return densify(listOf(0f to 1f, 0f to 0.1f, 0.5f to 0f, 1f to 0.1f, 1f to 1f), 12)
+    }
+
+    private fun lightning(): List<Pt> {
+        return densify(listOf(0.65f to 1f, 0.2f to 0.52f, 0.72f to 0.48f, 0.28f to 0f), 10)
+    }
+
+    private fun semicircle(): List<Pt> {
+        val n = 36
+        return (0..n).map { i ->
+            val t = PI * i / n
+            Pt((-cos(t)).toFloat(), sin(t).toFloat())
+        }
+    }
+
+    private fun question(): List<Pt> {
+        return densify(listOf(0.1f to 0.8f, 0.5f to 1f, 0.9f to 0.8f, 0.5f to 0.45f, 0.5f to 0.25f), 12)
     }
 
     private fun buildLetters(): List<Unistroke.Template> {

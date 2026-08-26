@@ -72,6 +72,16 @@ class AirPenEngine(
             Log.w(TAG, "reconnect", t)
         }
     }
+    private val strokeIdle = Runnable {
+        if (!drawing) return@Runnable
+        val pts = stroke.snapshot()
+        drawing = false
+        if (pts.size >= 2) {
+            lastStroke = pts
+            handleRecognition(recognizer.recognizeStroke(pts, store.current.gesture))
+        }
+        stroke.clear()
+    }
 
     @Volatile private var wired = false
     @Volatile private var halted = true
@@ -142,6 +152,7 @@ class AirPenEngine(
         }
         if (connectPen) {
             halted = false
+            hub.passAllMotion = true
             try {
                 hub.connect()
             } catch (t: Throwable) {
@@ -161,6 +172,7 @@ class AirPenEngine(
         main.removeCallbacks(longPress)
         main.removeCallbacks(idleSleep)
         main.removeCallbacks(reconnectPen)
+        main.removeCallbacks(strokeIdle)
         try {
             hub.disconnect()
         } catch (t: Throwable) {
@@ -210,6 +222,7 @@ class AirPenEngine(
             }
         }
         hub.registerListeners()
+        hub.passAllMotion = true
         _live.value = "Mode: ${sanitizeMode(mode).name}"
     }
 
@@ -218,30 +231,43 @@ class AirPenEngine(
         lastMotionAt = SystemClock.uptimeMillis()
         scheduleIdle()
         val g = store.current.gesture
-        absX += m.dx
-        absY += m.dy
+        val mag = kotlin.math.abs(m.dx) + kotlin.math.abs(m.dy)
+        val gain = if (g.motionGain <= 0.01f) 2.4f else g.motionGain
         when (mode) {
             AppMode.MOUSE, AppMode.POINTER, AppMode.CAMERA -> {
                 mouse.move(m.dx, m.dy)
-                if (drawing) stroke.add(absX, absY, m.t)
+                if (drawing) {
+                    absX += m.dx * gain
+                    absY += m.dy * gain
+                    stroke.add(absX, absY, m.t)
+                }
             }
             AppMode.SCROLL -> {
                 mouse.attach()
-                val gain = store.current.mouse.scrollGain
+                val sGain = store.current.mouse.scrollGain
                 if (kotlin.math.abs(m.dy) > g.deadZone || kotlin.math.abs(m.dx) > g.deadZone) {
                     if (hub.buttonDown.value) {
-                        mouse.scroll(-m.dx * gain, -m.dy * gain * 1.4f)
+                        mouse.scroll(-m.dx * sGain, -m.dy * sGain * 1.4f)
                     } else {
                         mouse.move(m.dx, m.dy)
                     }
                 }
             }
-            AppMode.MEDIA -> {
-                if (drawing || !g.requireButton) stroke.add(absX, absY, m.t)
-            }
-            AppMode.GESTURE, AppMode.TYPE -> {
-                if (drawing || !g.requireButton) {
+            AppMode.MEDIA, AppMode.GESTURE, AppMode.TYPE -> {
+                val allow = drawing || !g.requireButton || g.autoArm || hub.buttonDown.value
+                if (!drawing && mag > g.deadZone && allow) {
+                    drawing = true
+                    stroke.clear()
+                    absX = 0f
+                    absY = 0f
+                    stroke.add(0f, 0f, m.t)
+                }
+                if (drawing && allow) {
+                    absX += m.dx * gain
+                    absY += m.dy * gain
                     stroke.add(absX, absY, m.t)
+                    main.removeCallbacks(strokeIdle)
+                    main.postDelayed(strokeIdle, g.strokeIdleMs.coerceIn(80L, 800L))
                 }
             }
         }
@@ -264,12 +290,13 @@ class AirPenEngine(
             main.postDelayed(longPress, store.current.general.longPressMs)
         } else {
             drawing = false
-            hub.passAllMotion = false
+            hub.passAllMotion = true
             main.removeCallbacks(longPress)
+            main.removeCallbacks(strokeIdle)
             val held = longPosted
             longPosted = false
             val len = stroke.pathLength()
-            val moved = len > g.minFlickLength * 0.5f
+            val moved = len > g.minFlickLength * 0.35f
             when (mode) {
                 AppMode.MOUSE, AppMode.POINTER -> {
                     if (!moved) registerClick(now)
@@ -297,8 +324,14 @@ class AirPenEngine(
     fun lastDrawn(): List<studio.airpen.app.gesture.Pt> = lastStroke
 
     private fun finishStroke() {
+        main.removeCallbacks(strokeIdle)
         val pts = stroke.snapshot()
         lastStroke = pts
+        drawing = false
+        if (pts.size < 2) {
+            stroke.clear()
+            return
+        }
         val rec = recognizer.recognizeStroke(pts, store.current.gesture)
         handleRecognition(rec)
         stroke.clear()

@@ -26,9 +26,12 @@ class GestureRecognizerTest {
     }
 
     @Test
-    fun flickUp() {
-        val pts = line(0f, 0f, 0f, 1f)
-        val r = rec.recognizeStroke(pts, settings)
+    fun shortFastFlickUp() {
+        val pts = (0..6).map { i ->
+            val t = i / 6f
+            Pt(0f, t * 0.12f, i * 8L)
+        }
+        val r = rec.recognizeStroke(pts, settings.copy(minFlickLength = 0.05f, flickStraightness = 0.52f))
         assertEquals(GestureId.FLICK_UP, r.gesture)
     }
 

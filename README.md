@@ -16,17 +16,17 @@ Samsung and S Pen are trademarks of Samsung Electronics. This project is not aff
 
 ## What you can do
 
-- **Gestures:** up, down, left, right, four diagonals, circle (CW/CCW), square, triangle, zigzag, check, X, plus, heart, infinity, arrow, caret, star, spiral, pigtail, brackets.
+- **Gestures:** up, down, left, right, four diagonals, circle (CW/CCW), square, triangle, zigzag, check, X, plus, heart, infinity, arrow, caret, star, spiral, pigtail, brackets, wave, diamond, hook, **L, U, lightning, semicircle, question**.
 - **Flick to scroll (exactly one page):** hold the side button, flick **up** or **down**. Each flick moves **one full page** in that direction and stops — no extra fling. Works in Chrome, feeds, Settings, any app.
+- **Pickup:** motion auto-arms even if the side-button event is missed. Short, fast flicks count. Tune sensitivity, dead zone, min length, and invert axes in More → settings.
 - **Button:** click, double-click, triple-click, long-press — each remappable. Triple-click stops AirPen.
 - **Air mouse:** S Pen IMU moves an on-screen cursor (up to ~10 m). Click, double-click, long-press, drag, scroll, precision mode.
 - **STOP:** big Stop on Home, a floating STOP overlay over other apps, and a Stop action on the persistent notification. Cuts the S Pen session, air mouse, and background service immediately.
-- **More gesture actions:** YouTube, Maps, Chrome, WhatsApp, share, zoom, jump to top/bottom, pull-to-refresh, D-pad, Wi-Fi/Bluetooth settings, notes, gallery, and more. Search them in the Gestures tab.
-- **New shapes:** wave, diamond, hook.
+- **More gesture actions:** tabs, half-page scroll, find, bookmark, YouTube, Maps, Chrome, WhatsApp, Telegram, Netflix, Drive, Translate, share, zoom, jump to top/bottom, pull-to-refresh, D-pad, Wi-Fi/Bluetooth, notes, gallery, timer, wallet, and more. Search them in the Gestures tab.
 - **Camera tracking:** fallback mouse for S Pens that dropped BLE (S25 Ultra and later). Track a bright tip in the camera.
-- **Profiles:** System, Reading, Media, plus your own. Per-app profile switching.
+- **Profiles:** System, Reading, Media, Gaming, Night, plus your own. Per-app profile switching.
 - **Macros, HUD, haptics, invert axes, dead zone, sensitivity, export/import JSON.**
-- **Practice pad** on the Home screen so you can train the recogniser with a finger.
+- **Practice pad** on the Home screen so you can train the recogniser with a finger or the S Pen on glass.
 
 Air typing (air-write IME / letter recognition) has been removed.
 

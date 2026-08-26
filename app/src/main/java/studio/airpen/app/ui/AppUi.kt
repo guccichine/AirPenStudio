@@ -6,7 +6,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -99,7 +101,7 @@ private fun HomeScreen(activity: MainActivity) {
                     Spacer(Modifier.width(8.dp))
                     Text("$status  ·  $live")
                 }
-                Text(last.gesture?.let { "${it.symbol} ${it.label}  ${(last.score * 100).toInt()}%" } ?: "Flick ↑ / ↓ to scroll the screen · draw a gesture to test", color = Gold)
+                Text(last.gesture?.let { "${it.symbol} ${it.label}  ${(last.score * 100).toInt()}%" } ?: "Flick with the S Pen or draw on the pad — short strokes count", color = Gold)
             }
         }
         Button(
@@ -160,12 +162,18 @@ private fun PermRow(label: String, ok: Boolean, onClick: () -> Unit) {
 private fun PracticePad() {
     val pts = remember { mutableStateListOf<Pt>() }
     Column {
-        Box(Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF101217)).border(1.dp, Gold.copy(alpha = 0.4f), RoundedCornerShape(16.dp)).pointerInput(Unit) {
-            detectDragGestures(
-                onDragStart = { o -> pts.clear(); pts += Pt(o.x, -o.y, System.currentTimeMillis()) },
-                onDrag = { change, _ -> val p = change.position; pts += Pt(p.x, -p.y, System.currentTimeMillis()) },
-                onDragEnd = { AirPen.engine.feedPractice(pts.toList()) },
-            )
+        Box(Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF101217)).border(1.dp, Gold.copy(alpha = 0.4f), RoundedCornerShape(16.dp)).pointerInput(Unit) {
+            awaitEachGesture {
+                val down = awaitFirstDown()
+                pts.clear()
+                pts += Pt(down.position.x, -down.position.y, System.currentTimeMillis())
+                drag(down.id) { change ->
+                    val p = change.position
+                    pts += Pt(p.x, -p.y, System.currentTimeMillis())
+                    change.consume()
+                }
+                AirPen.engine.feedPractice(pts.toList())
+            }
         }) {
             Canvas(Modifier.fillMaxSize()) {
                 if (pts.size > 1) {
@@ -174,7 +182,7 @@ private fun PracticePad() {
                     drawPath(path, Gold, style = Stroke(width = 6f, cap = StrokeCap.Round))
                 }
             }
-            Text("Draw here", color = Color.White.copy(alpha = 0.35f), modifier = Modifier.align(Alignment.Center))
+            Text("Flick here with S Pen or finger", color = Color.White.copy(alpha = 0.35f), modifier = Modifier.align(Alignment.Center))
         }
     }
 }
@@ -242,11 +250,17 @@ private fun SettingsPage() {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SwitchRow("Hold button to draw", g.holdToDraw) { upd { copy(holdToDraw = it) } }
         SwitchRow("Require button for gestures", g.requireButton) { upd { copy(requireButton = it) } }
+        SwitchRow("Auto-arm on motion (picks up missed button events)", g.autoArm) { upd { copy(autoArm = it) } }
         SwitchRow("Show HUD overlay", g.showHud) { upd { copy(showHud = it) }; AirPen.engine.hud.enabled = it }
         SwitchRow("Haptic feedback", g.haptic) { upd { copy(haptic = it) } }
+        SwitchRow("Invert air X", g.invertMotionX) { upd { copy(invertMotionX = it) } }
+        SwitchRow("Invert air Y", g.invertMotionY) { upd { copy(invertMotionY = it) } }
         SwitchRow("Battery saver (sleeps air motion when idle)", g.batterySaver) { upd { copy(batterySaver = it) } }
+        SliderRow("Sensitivity / motion gain", g.motionGain, 0.8f..4.5f) { upd { copy(motionGain = it) } }
         SliderRow("Dead zone", g.deadZone, 0f..0.08f) { upd { copy(deadZone = it) } }
-        SliderRow("Flick straightness", g.flickStraightness, 0.5f..0.95f) { upd { copy(flickStraightness = it) } }
+        SliderRow("Min flick length", g.minFlickLength, 0.02f..0.25f) { upd { copy(minFlickLength = it) } }
+        SliderRow("Flick straightness", g.flickStraightness, 0.35f..0.95f) { upd { copy(flickStraightness = it) } }
+        SliderRow("Shape threshold", g.shapeThreshold, 0.35f..0.9f) { upd { copy(shapeThreshold = it) } }
         Button(onClick = { AirPen.store.saveNow() }, modifier = Modifier.fillMaxWidth()) { Text("Save settings") }
         Button(onClick = { AirPen.store.resetDefaults() }, modifier = Modifier.fillMaxWidth()) { Text("Reset all defaults") }
     }
@@ -313,11 +327,11 @@ private fun AppsPage(activity: MainActivity) {
 @Composable
 private fun AboutPage() {
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("AirPen Studio 1.0.9", style = MaterialTheme.typography.headlineMedium)
+        Text("AirPen Studio 1.1.0", style = MaterialTheme.typography.headlineMedium)
         Text("S Pen customisation for air gestures and distant air-mouse. Air typing has been removed.")
-        Text("Flick up/down scrolls one page. Wave / diamond / hook are extra shapes. Gestures tab: search any action.")
-        Text("STOP on Home, on the floating overlay, or in the notification cuts the S Pen session immediately.")
-        Text("On S22 Ultra: enable Accessibility + Appear on top, disable Samsung Air actions for other apps, pull the S Pen out.")
+        Text("Gestures now auto-arm on motion so missed side-button events still count. Short flicks pick up more easily.")
+        Text("New shapes: L, U, lightning, semicircle, question. New actions: tabs, apps, half-page, brightness, find, bookmark.")
+        Text("Profiles: System, Reading, Media, Gaming, Night. STOP cuts the session immediately.")
     }
 }
 
