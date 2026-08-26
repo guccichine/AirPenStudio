@@ -68,7 +68,8 @@ class MainActivity : ComponentActivity() {
             val mode = AirPen.engine.mode
             if (mode == studio.airpen.app.data.AppMode.MOUSE ||
                 mode == studio.airpen.app.data.AppMode.POINTER ||
-                mode == studio.airpen.app.data.AppMode.SCROLL
+                mode == studio.airpen.app.data.AppMode.SCROLL ||
+                mode == studio.airpen.app.data.AppMode.TYPE
             ) {
                 AirPen.engine.setMode(mode)
             }
@@ -171,10 +172,6 @@ class MainActivity : ComponentActivity() {
         AirPenBackground.stop(this)
     }
 
-    fun stopAll() {
-        AirPenBackground.stop(this)
-    }
-
     fun openBatterySettings() {
         try {
             if (Build.VERSION.SDK_INT >= 23) {
@@ -222,6 +219,10 @@ class MainActivity : ComponentActivity() {
                 Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")),
             )
         }
+    }
+
+    fun openImeSettings() {
+        startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
     }
 
     companion object {

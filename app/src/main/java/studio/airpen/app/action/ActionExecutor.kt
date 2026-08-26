@@ -38,7 +38,6 @@ class ActionExecutor(private val appContext: Context) {
     var textInjector: ((String) -> Unit)? = null
     var shiftToggler: (() -> Unit)? = null
     var capsToggler: (() -> Unit)? = null
-    var stopEngine: (() -> Unit)? = null
 
     private val main = Handler(Looper.getMainLooper())
     private var torchOn = false
@@ -153,8 +152,9 @@ class ActionExecutor(private val appContext: Context) {
             ActionId.DISMISS_SHADE -> if (Build.VERSION.SDK_INT >= 31) svc?.performGlobalAction(15)
             ActionId.ACCESSIBILITY_ALL_APPS -> if (Build.VERSION.SDK_INT >= 31) svc?.performGlobalAction(14)
             ActionId.MODE_GESTURE -> modeChanger?.invoke(AppMode.GESTURE)
+            ActionId.MODE_GESTURE -> modeChanger?.invoke(AppMode.GESTURE)
             ActionId.MODE_MOUSE -> modeChanger?.invoke(AppMode.MOUSE)
-            ActionId.MODE_TYPE, ActionId.STOP_ENGINE -> stopEngine?.invoke()
+            ActionId.MODE_TYPE -> modeChanger?.invoke(AppMode.TYPE)
             ActionId.MODE_SCROLL -> modeChanger?.invoke(AppMode.SCROLL)
             ActionId.MODE_POINTER -> modeChanger?.invoke(AppMode.POINTER)
             ActionId.MODE_MEDIA -> modeChanger?.invoke(AppMode.MEDIA)
@@ -193,46 +193,6 @@ class ActionExecutor(private val appContext: Context) {
             ActionId.HIDE_CURSOR -> cursorHider?.invoke()
             ActionId.PRECISION_TOGGLE -> precisionToggler?.invoke()
             ActionId.NOTIFICATION_EXPAND -> svc?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
-            ActionId.HALF_PAGE_UP -> halfPage(up = true)
-            ActionId.HALF_PAGE_DOWN -> halfPage(up = false)
-            ActionId.NEW_TAB -> combo("CTRL+T")
-            ActionId.CLOSE_TAB -> combo("CTRL+W")
-            ActionId.TAB_NEXT -> combo("CTRL+TAB")
-            ActionId.TAB_PREV -> combo("CTRL+SHIFT+TAB")
-            ActionId.FIND_IN_PAGE -> combo("CTRL+F")
-            ActionId.BOOKMARK -> combo("CTRL+D")
-            ActionId.VOICE_RECORDER -> openFirst("com.sec.android.app.voicenote", "com.google.android.apps.recorder")
-            ActionId.REMINDER -> openFirst("com.samsung.android.app.reminder", "com.google.android.keep")
-            ActionId.SMARTTHINGS -> openFirst("com.samsung.android.oneconnect")
-            ActionId.WALLET -> openFirst("com.samsung.android.spay", "com.google.android.apps.walletnfcrel")
-            ActionId.TELEGRAM -> openFirst("org.telegram.messenger")
-            ActionId.DISCORD -> openFirst("com.discord")
-            ActionId.REDDIT -> openFirst("com.reddit.frontpage")
-            ActionId.X_APP -> openFirst("com.twitter.android")
-            ActionId.NETFLIX -> openFirst("com.netflix.mediaclient")
-            ActionId.DRIVE -> openFirst("com.google.android.apps.docs")
-            ActionId.KEEP -> openFirst("com.google.android.keep")
-            ActionId.TRANSLATE -> openFirst("com.google.android.apps.translate")
-            ActionId.LENS -> openFirst("com.google.ar.lens", "com.google.android.googlequicksearchbox")
-            ActionId.DARK_MODE -> settingsPage("android.settings.DISPLAY_SETTINGS")
-            ActionId.POWER_SAVING -> settingsPage(Intent.ACTION_POWER_USAGE_SUMMARY)
-            ActionId.AIRPLANE_SETTINGS -> settingsPage(Settings.ACTION_AIRPLANE_MODE_SETTINGS)
-            ActionId.HOTSPOT_SETTINGS -> settingsPage("android.settings.TETHER_SETTINGS")
-            ActionId.QR_SCAN -> openFirst("com.sec.android.app.camera", "com.google.android.googlequicksearchbox")
-            ActionId.MAGNIFIER -> settingsPage("android.settings.ACCESSIBILITY_SETTINGS")
-            ActionId.APP_INFO -> settingsPage(Settings.ACTION_APPLICATION_SETTINGS)
-            ActionId.MEDIA_SHUFFLE -> media(KeyEvent.KEYCODE_MEDIA_NEXT)
-            ActionId.TAKE_PHOTO -> launchAction("android.media.action.STILL_IMAGE_CAMERA")
-            ActionId.VIDEO_CAM -> launchAction("android.media.action.VIDEO_CAMERA")
-            ActionId.TIMER -> openFirst("com.sec.android.app.clockpackage", "com.google.android.deskclock")
-            ActionId.STOPWATCH -> openFirst("com.sec.android.app.clockpackage", "com.google.android.deskclock")
-            ActionId.KEYBOARD_HIDE -> svc?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
-            ActionId.COPY_LINK -> performEdit("copy")
-            ActionId.PASTE_GO -> performEdit("paste")
-            ActionId.KILL_FOREGROUND -> {
-                svc?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
-                main.postDelayed({ svc?.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME) }, 220)
-            }
         }
     }
 
@@ -285,19 +245,6 @@ class ActionExecutor(private val appContext: Context) {
         lastPageAt = now
         if (pageViaNode(vertical = true, flickPositive = flickUp)) return
         swipeOneViewport(vertical = true, flickPositive = flickUp)
-    }
-
-    private fun halfPage(up: Boolean) {
-        if (AirPenAccessibilityService.instance == null) {
-            toast("Turn on Accessibility so AirPen can scroll")
-            return
-        }
-        val metrics = appContext.resources.displayMetrics
-        val w = metrics.widthPixels.toFloat()
-        val h = metrics.heightPixels.toFloat()
-        val pad = h * 0.28f
-        if (up) swipe(w / 2f, h - pad, w / 2f, pad, 420L)
-        else swipe(w / 2f, pad, w / 2f, h - pad, 420L)
     }
 
     private fun scrollOnePageHorizontal(flickLeft: Boolean) {
@@ -458,10 +405,9 @@ class ActionExecutor(private val appContext: Context) {
     }
 
     private fun cycleMode() {
-        val order = AppMode.entries.filter { it != AppMode.TYPE }
-        val cur = studio.airpen.app.engine.AirPenEngine.sanitizeMode(studio.airpen.app.AirPen.engine.mode)
-        val idx = order.indexOf(cur).coerceAtLeast(0)
-        modeChanger?.invoke(order[(idx + 1) % order.size])
+        val order = AppMode.entries
+        val cur = studio.airpen.app.AirPen.engine.mode
+        modeChanger?.invoke(order[(order.indexOf(cur) + 1) % order.size])
     }
 
     private fun openPackage(pkg: String) {

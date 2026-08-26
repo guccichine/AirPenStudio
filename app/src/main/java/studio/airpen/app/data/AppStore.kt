@@ -147,56 +147,13 @@ class AppStore(context: Context) {
                 },
             )
         }
-        if (next.version < 5) {
+        if (next.version >= 6) {
+            // 1.1.0 wrote version 6 with auto-arm / requireButton=false, which
+            // kept the BLE S Pen session hogged so the hardware pen died.
             next = next.copy(
                 version = 5,
-                general = next.general.copy(
-                    lastMode = if (next.general.lastMode == AppMode.TYPE) AppMode.GESTURE else next.general.lastMode,
-                ),
-                profiles = next.profiles
-                    .filterNot { it.id == "typing" }
-                    .map { p ->
-                        val map = p.map.mapValues { (_, bound) ->
-                            if (bound.id == ActionId.MODE_TYPE) BoundAction(ActionId.STOP_ENGINE, bound.arg) else bound
-                        }
-                        p.copy(map = map)
-                    },
-                activeProfileId = if (next.activeProfileId == "typing") "system" else next.activeProfileId,
-                letterSamples = emptyList(),
+                gesture = GestureSettings(),
             )
-        }
-        if (next.version < 6) {
-            val haveGaming = next.profiles.any { it.id == "gaming" }
-            val extras = defaultProfiles().filter { p ->
-                (p.id == "gaming" || p.id == "night") && next.profiles.none { it.id == p.id }
-            }
-            val gain = next.gesture.motionGain
-            next = next.copy(
-                version = 6,
-                gesture = next.gesture.copy(
-                    requireButton = false,
-                    autoArm = true,
-                    motionGain = if (gain <= 0.01f) 2.4f else kotlin.math.max(gain, 1.8f),
-                    minFlickLength = kotlin.math.min(next.gesture.minFlickLength, 0.055f),
-                    flickStraightness = kotlin.math.min(next.gesture.flickStraightness, 0.55f),
-                    deadZone = kotlin.math.min(next.gesture.deadZone, 0.004f),
-                    shapeThreshold = kotlin.math.min(next.gesture.shapeThreshold, 0.52f),
-                    strokeIdleMs = if (next.gesture.strokeIdleMs <= 0L) 200L else next.gesture.strokeIdleMs,
-                ),
-                profiles = next.profiles.map { p ->
-                    if (p.id != "system") p
-                    else {
-                        val map = p.map.toMutableMap()
-                        if (map[GestureId.L_SHAPE] == null) map[GestureId.L_SHAPE] = BoundAction(ActionId.HOME)
-                        if (map[GestureId.U_SHAPE] == null) map[GestureId.U_SHAPE] = BoundAction(ActionId.TYPE_UNDO)
-                        if (map[GestureId.LIGHTNING] == null) map[GestureId.LIGHTNING] = BoundAction(ActionId.FLASHLIGHT)
-                        if (map[GestureId.SEMICIRCLE] == null) map[GestureId.SEMICIRCLE] = BoundAction(ActionId.MEDIA_NEXT)
-                        if (map[GestureId.QUESTION] == null) map[GestureId.QUESTION] = BoundAction(ActionId.FIND_IN_PAGE)
-                        p.copy(map = map)
-                    }
-                } + extras,
-            )
-            if (!haveGaming) Unit
         }
         return next
     }

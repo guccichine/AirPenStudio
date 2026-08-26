@@ -6,9 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,10 +36,9 @@ import studio.airpen.app.data.*
 import studio.airpen.app.gesture.Pt
 import studio.airpen.app.service.AirPenAccessibilityService
 import studio.airpen.app.ui.theme.Gold
+import java.util.UUID
 
-private enum class Tab { Home, Gestures, Mouse, More }
-
-private val VisibleModes = AppMode.entries.filter { it != AppMode.TYPE }
+private enum class Tab { Home, Gestures, Mouse, Type, More }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +60,7 @@ fun AirPenAppUi(activity: MainActivity) {
                     Item(Tab.Home, "Home", Icons.Outlined.Home),
                     Item(Tab.Gestures, "Gestures", Icons.Outlined.Gesture),
                     Item(Tab.Mouse, "Mouse", Icons.Outlined.Mouse),
+                    Item(Tab.Type, "Type", Icons.Outlined.Keyboard),
                     Item(Tab.More, "More", Icons.Outlined.MoreHoriz),
                 ).forEach { it ->
                     NavigationBarItem(selected = tab == it.t, onClick = { tab = it.t }, icon = { Icon(it.icon, it.label) }, label = { Text(it.label) })
@@ -74,7 +72,8 @@ fun AirPenAppUi(activity: MainActivity) {
             when (tab) {
                 Tab.Home -> HomeScreen(activity)
                 Tab.Gestures -> GestureSettingsScreen()
-                Tab.Mouse -> MouseScreen(activity)
+                Tab.Mouse -> MouseScreen()
+                Tab.Type -> TypeScreen()
                 Tab.More -> MoreScreen(activity)
             }
         }
@@ -90,8 +89,6 @@ private fun HomeScreen(activity: MainActivity) {
     val mode by AirPen.engine.modeFlow.collectAsState()
     val acc = AirPenAccessibilityService.isEnabled()
     val overlay = Settings.canDrawOverlays(activity)
-    val bg by studio.airpen.app.service.AirPenBackground.runningFlow.collectAsState()
-    val running = bg || status.name == "CONNECTED" || status.name == "CONNECTING"
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -101,38 +98,24 @@ private fun HomeScreen(activity: MainActivity) {
                     Spacer(Modifier.width(8.dp))
                     Text("$status  ·  $live")
                 }
-                Text(last.gesture?.let { "${it.symbol} ${it.label}  ${(last.score * 100).toInt()}%" } ?: "Flick with the S Pen or draw on the pad — short strokes count", color = Gold)
+                Text(last.gesture?.let { "${it.symbol} ${it.label}  ${(last.score * 100).toInt()}%" } ?: last.letter?.let { "Letter $it  ${(last.score * 100).toInt()}%" } ?: "Flick ↑ / ↓ to scroll the screen · draw a gesture to test", color = Gold)
             }
         }
-        Button(
-            onClick = { activity.stopAll() },
-            enabled = running,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFC4453C),
-                contentColor = Color.White,
-                disabledContainerColor = Color(0xFF3A2222),
-                disabledContentColor = Color(0x66FFFFFF),
-            ),
-        ) { Text("STOP", fontWeight = FontWeight.Bold, fontSize = 18.sp) }
-        Text(
-            if (running) "Cuts the S Pen session, air mouse, and background service immediately." else "Connect the S Pen to arm Stop. A floating STOP also appears over other apps.",
-            fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-        )
         Text("Mode", fontWeight = FontWeight.Medium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            VisibleModes.forEach { m -> FilterChip(selected = mode == m, onClick = { AirPen.engine.setMode(m) }, label = { Text(m.name) }) }
+            AppMode.entries.forEach { m -> FilterChip(selected = mode == m, onClick = { AirPen.engine.setMode(m) }, label = { Text(m.name) }) }
         }
         Text("Setup", fontWeight = FontWeight.Medium)
-        PermRow("Accessibility (clicks, back, home)", acc) { activity.openAccessibilitySettings() }
-        PermRow("Display over other apps (cursor + HUD + Stop)", overlay) { activity.openOverlaySettings() }
+        PermRow("Accessibility (clicks, back, home, typing)", acc) { activity.openAccessibilitySettings() }
+        PermRow("Display over other apps (cursor + HUD)", overlay) { activity.openOverlaySettings() }
         PermRow("Write settings (brightness)", Settings.System.canWrite(activity)) { activity.openWriteSettings() }
+        PermRow("Air Type keyboard (optional IME)", false) { activity.openImeSettings() }
         Text("This build does not connect the S Pen until you tap Connect. That is what was crashing on S22 Ultra.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
         Button(onClick = { activity.requestConnect() }, modifier = Modifier.fillMaxWidth()) { Text("Connect S Pen") }
+        val bg by studio.airpen.app.service.AirPenBackground.runningFlow.collectAsState()
         Button(onClick = { if (bg) activity.stopBackground() else activity.startBackground() }, modifier = Modifier.fillMaxWidth()) { Text(if (bg) "Background ON — tap to stop" else "Work in background") }
         OutlinedButton(onClick = { activity.openBatterySettings() }, modifier = Modifier.fillMaxWidth()) { Text("Allow background battery") }
-        Text("Connect starts a persistent notification so gestures keep working after you leave this screen. Use STOP or the notification Stop action to cut it. Unrestrict battery for AirPen Studio on Samsung.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
+        Text("Connect starts a persistent notification so gestures keep working after you leave this screen. Unrestrict battery for AirPen Studio on Samsung.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
         Text("Samsung Settings → Advanced features → S Pen → Air actions: turn Air actions OFF for other apps. Pull the S Pen out, tap Connect, hold the side button and flick up or down to scroll any screen.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
         val crash = remember { studio.airpen.app.CrashLog.read(activity) }
         if (!crash.isNullOrBlank()) {
@@ -161,19 +144,18 @@ private fun PermRow(label: String, ok: Boolean, onClick: () -> Unit) {
 @Composable
 private fun PracticePad() {
     val pts = remember { mutableStateListOf<Pt>() }
+    var typeMode by remember { mutableStateOf(false) }
     Column {
-        Box(Modifier.fillMaxWidth().height(280.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF101217)).border(1.dp, Gold.copy(alpha = 0.4f), RoundedCornerShape(16.dp)).pointerInput(Unit) {
-            awaitEachGesture {
-                val down = awaitFirstDown()
-                pts.clear()
-                pts += Pt(down.position.x, -down.position.y, System.currentTimeMillis())
-                drag(down.id) { change ->
-                    val p = change.position
-                    pts += Pt(p.x, -p.y, System.currentTimeMillis())
-                    change.consume()
-                }
-                AirPen.engine.feedPractice(pts.toList())
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Recognize as letter", modifier = Modifier.weight(1f))
+            Switch(checked = typeMode, onCheckedChange = { typeMode = it })
+        }
+        Box(Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF101217)).border(1.dp, Gold.copy(alpha = 0.4f), RoundedCornerShape(16.dp)).pointerInput(typeMode) {
+            detectDragGestures(
+                onDragStart = { o -> pts.clear(); pts += Pt(o.x, -o.y, System.currentTimeMillis()) },
+                onDrag = { change, _ -> val p = change.position; pts += Pt(p.x, -p.y, System.currentTimeMillis()) },
+                onDragEnd = { AirPen.engine.feedPractice(pts.toList(), typeMode) },
+            )
         }) {
             Canvas(Modifier.fillMaxSize()) {
                 if (pts.size > 1) {
@@ -182,34 +164,33 @@ private fun PracticePad() {
                     drawPath(path, Gold, style = Stroke(width = 6f, cap = StrokeCap.Round))
                 }
             }
-            Text("Flick here with S Pen or finger", color = Color.White.copy(alpha = 0.35f), modifier = Modifier.align(Alignment.Center))
+            Text("Draw here", color = Color.White.copy(alpha = 0.35f), modifier = Modifier.align(Alignment.Center))
+        }
+        val last by AirPen.engine.lastRecognition.collectAsState()
+        if (typeMode && last.alternatives.isNotEmpty()) {
+            Text("Was it… tap to train your handwriting", fontSize = 13.sp, color = Gold, modifier = Modifier.padding(top = 8.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                last.alternatives.take(4).forEach { (ch, score) ->
+                    FilterChip(
+                        selected = ch == last.letter,
+                        onClick = { AirPen.engine.trainLastLetter(ch) },
+                        label = { Text("$ch  ${(score * 100).toInt()}%") },
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun MouseScreen(activity: MainActivity) {
+private fun MouseScreen() {
     val state by AirPen.store.state.collectAsState()
     val m = state.mouse
-    val bg by studio.airpen.app.service.AirPenBackground.runningFlow.collectAsState()
-    val status by AirPen.hub.status.collectAsState()
-    val running = bg || status.name == "CONNECTED"
     fun upd(block: MouseSettings.() -> MouseSettings) {
         AirPen.store.update { it.copy(mouse = it.mouse.block()) }
         AirPen.engine.mouse.settings = AirPen.store.current.mouse
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Button(
-            onClick = { activity.stopAll() },
-            enabled = running,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFC4453C),
-                contentColor = Color.White,
-                disabledContainerColor = Color(0xFF3A2222),
-                disabledContentColor = Color(0x66FFFFFF),
-            ),
-        ) { Text("STOP", fontWeight = FontWeight.Bold) }
         Button(onClick = { AirPen.engine.setMode(AppMode.MOUSE) }, modifier = Modifier.fillMaxWidth()) { Text("Start air mouse") }
         SliderRow("Sensitivity", m.sensitivity, 0.3f..4f) { upd { copy(sensitivity = it) } }
         SliderRow("Acceleration", m.acceleration, 0.5f..4f) { upd { copy(acceleration = it) } }
@@ -218,7 +199,48 @@ private fun MouseScreen(activity: MainActivity) {
         SwitchRow("Invert X", m.invertX) { upd { copy(invertX = it) } }
         SwitchRow("Invert Y", m.invertY) { upd { copy(invertY = it) } }
         SwitchRow("Show motion trail", m.showTrail) { upd { copy(showTrail = it) } }
-        Text("Wave the S Pen to move the cursor. Button click taps. Hold for long-press. Tap STOP to drop the cursor.")
+        Text("Wave the S Pen to move the cursor. Button click taps. Hold for long-press.")
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TypeScreen() {
+    val state by AirPen.store.state.collectAsState()
+    val t = state.type
+    fun upd(block: TypeSettings.() -> TypeSettings) {
+        AirPen.store.update { it.copy(type = it.type.block()) }
+        AirPen.engine.typer.settings = AirPen.store.current.type
+    }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Button(onClick = { AirPen.engine.setMode(AppMode.TYPE) }, modifier = Modifier.fillMaxWidth()) { Text("Start Air Type") }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("hybrid", "write", "keyboard").forEach { s -> FilterChip(selected = t.engine == s, onClick = { upd { copy(engine = s) } }, label = { Text(s) }) }
+        }
+        SliderRow("Letter confidence", t.minConfidence, 0.25f..0.70f) { upd { copy(minConfidence = it) } }
+        SwitchRow("Invert air-write Y (S Pen IMU)", t.invertAirY) { upd { copy(invertAirY = it) } }
+        SwitchRow("Auto-capitalise", t.autoCapitalize) { upd { copy(autoCapitalize = it) } }
+        SwitchRow("Word suggestions", t.suggestions) { upd { copy(suggestions = it) } }
+        Text("Hold the side button and write a letter in the air. Flick ← backspace  → space  ↓ enter  ↑ shift.", fontSize = 13.sp)
+        Text("If a letter is wrong, turn on “Recognize as letter” on the Home practice pad, draw it, then tap the correct letter so AirPen learns your handwriting.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
+        val samples = state.letterSamples.size
+        Text("Trained samples: $samples", color = Gold)
+        OutlinedButton(onClick = { AirPen.store.clearLetterSamples() }, modifier = Modifier.fillMaxWidth()) { Text("Clear trained letters") }
+        val last by AirPen.engine.lastRecognition.collectAsState()
+        if (last.letter != null && last.letter !in listOf("⌫", " ", "\n", "⇧")) {
+            Text("Last guess: ${last.letter}  ${(last.score * 100).toInt()}%", fontWeight = FontWeight.Medium)
+            Text("Tap the real letter to train it")
+            val alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                alphabet.forEach { ch ->
+                    FilterChip(
+                        selected = ch.toString() == last.letter,
+                        onClick = { AirPen.engine.trainLastLetter(ch.toString()) },
+                        label = { Text(ch.toString()) },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -250,17 +272,11 @@ private fun SettingsPage() {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SwitchRow("Hold button to draw", g.holdToDraw) { upd { copy(holdToDraw = it) } }
         SwitchRow("Require button for gestures", g.requireButton) { upd { copy(requireButton = it) } }
-        SwitchRow("Auto-arm on motion (picks up missed button events)", g.autoArm) { upd { copy(autoArm = it) } }
         SwitchRow("Show HUD overlay", g.showHud) { upd { copy(showHud = it) }; AirPen.engine.hud.enabled = it }
         SwitchRow("Haptic feedback", g.haptic) { upd { copy(haptic = it) } }
-        SwitchRow("Invert air X", g.invertMotionX) { upd { copy(invertMotionX = it) } }
-        SwitchRow("Invert air Y", g.invertMotionY) { upd { copy(invertMotionY = it) } }
         SwitchRow("Battery saver (sleeps air motion when idle)", g.batterySaver) { upd { copy(batterySaver = it) } }
-        SliderRow("Sensitivity / motion gain", g.motionGain, 0.8f..4.5f) { upd { copy(motionGain = it) } }
         SliderRow("Dead zone", g.deadZone, 0f..0.08f) { upd { copy(deadZone = it) } }
-        SliderRow("Min flick length", g.minFlickLength, 0.02f..0.25f) { upd { copy(minFlickLength = it) } }
-        SliderRow("Flick straightness", g.flickStraightness, 0.35f..0.95f) { upd { copy(flickStraightness = it) } }
-        SliderRow("Shape threshold", g.shapeThreshold, 0.35f..0.9f) { upd { copy(shapeThreshold = it) } }
+        SliderRow("Flick straightness", g.flickStraightness, 0.5f..0.95f) { upd { copy(flickStraightness = it) } }
         Button(onClick = { AirPen.store.saveNow() }, modifier = Modifier.fillMaxWidth()) { Text("Save settings") }
         Button(onClick = { AirPen.store.resetDefaults() }, modifier = Modifier.fillMaxWidth()) { Text("Reset all defaults") }
     }
@@ -270,7 +286,7 @@ private fun SettingsPage() {
 private fun ProfilesPage() {
     val state by AirPen.store.state.collectAsState()
     Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        state.profiles.filter { it.id != "typing" }.forEach { p ->
+        state.profiles.forEach { p ->
             Card(modifier = Modifier.fillMaxWidth().clickable { AirPen.store.update { it.copy(activeProfileId = p.id) } }, colors = CardDefaults.cardColors(containerColor = if (p.id == state.activeProfileId) Gold.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(Modifier.padding(14.dp)) {
                     Text(p.name, fontWeight = FontWeight.Medium)
@@ -315,7 +331,7 @@ private fun AppsPage(activity: MainActivity) {
                 Text(state.profiles.firstOrNull { it.id == current }?.name ?: "default", color = Gold)
                 DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(text = { Text("Default") }, onClick = { AirPen.store.update { s -> s.copy(appProfileMap = s.appProfileMap - pkg) }; expanded = false })
-                    state.profiles.filter { it.id != "typing" }.forEach { p ->
+                    state.profiles.forEach { p ->
                         DropdownMenuItem(text = { Text(p.name) }, onClick = { AirPen.store.update { s -> s.copy(appProfileMap = s.appProfileMap + (pkg to p.id)) }; expanded = false })
                     }
                 }
@@ -327,11 +343,11 @@ private fun AppsPage(activity: MainActivity) {
 @Composable
 private fun AboutPage() {
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("AirPen Studio 1.1.0", style = MaterialTheme.typography.headlineMedium)
-        Text("S Pen customisation for air gestures and distant air-mouse. Air typing has been removed.")
-        Text("Gestures now auto-arm on motion so missed side-button events still count. Short flicks pick up more easily.")
-        Text("New shapes: L, U, lightning, semicircle, question. New actions: tabs, apps, half-page, brightness, find, bookmark.")
-        Text("Profiles: System, Reading, Media, Gaming, Night. STOP cuts the session immediately.")
+        Text("AirPen Studio 1.1.1", style = MaterialTheme.typography.headlineMedium)
+        Text("Rollback to the 1.0.8 S Pen engine. 1.1.0 auto-arm hogged the pen — this build requires the side button again.")
+        Text("Flick up/down scrolls one page. Wave / diamond / hook are extra shapes. Gestures tab: search any action.")
+        Text("Air Type: hold the side button and write a letter. Train your handwriting on the Home practice pad.")
+        Text("On S22 Ultra: enable Accessibility + Appear on top, disable Samsung Air actions for other apps, pull the S Pen out.")
     }
 }
 

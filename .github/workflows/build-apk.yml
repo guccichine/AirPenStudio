@@ -46,24 +46,22 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.0
-          name: AirPen Studio 1.1.0
+          tag_name: v1.1.1
+          name: AirPen Studio 1.1.1
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            **1.1.0** — Gesture pickup fix. More customisation. More actions. Air typing stays gone.
+            **1.1.1 rollback** — S Pen engine from 1.0.8 (two builds back).
 
-            Gestures now auto-arm on motion if the side-button event is missed. Short, fast flicks count. Sensitivity, dead zone, invert, and min flick length are in More → settings.
+            1.1.0 auto-armed every motion event and kept the BLE session hogged, so the hardware S Pen stopped working. This build requires the side button again and clears those settings.
 
-            New shapes: L, U, lightning, semicircle, question.
-            New actions: tabs, half-page, find, bookmark, Telegram, Netflix, Drive, Translate, timer, wallet, and more.
-            New profiles: Gaming, Night.
-
-            **Uninstall any older AirPen Studio first**, then install this APK.
+            **Uninstall any older AirPen Studio first**, then install this APK. If the pen is still dead after uninstall, pop it in and out and reboot.
 
             1. Download **AirPenStudio.apk** below and install it.
             2. Enable **Accessibility** and **Display over other apps**.
-            3. Turn Samsung **Air actions** off for Camera and other apps.
-            4. Tap **Connect S Pen**.
-            5. Flick up / down to scroll one page. **STOP** cuts the session immediately.
-            6. **Gestures** tab: tap a gesture, search an action, Save.
+            3. Tap **Connect S Pen**.
+            4. **Air Type:** Type tab → Start Air Type. Hold the side button and write a letter.
+            5. If a letter is wrong: Home → turn on **Recognize as letter**, draw it, tap the correct letter to train.
+            6. **Gestures** tab: search actions (YouTube, share, zoom, jump to top, Wi-Fi, …) and bind wave / diamond / hook too.
+
+            Immediate fallback while this builds: [AirPenStudio 1.0.8 APK](https://github.com/guccichine/AirPenStudio/releases/download/v1.0.8/AirPenStudio.apk)
