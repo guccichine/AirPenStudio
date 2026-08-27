@@ -8,7 +8,6 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
-import android.widget.FrameLayout
 import studio.airpen.app.action.ActionExecutor
 import studio.airpen.app.data.MouseSettings
 import studio.airpen.app.overlay.OverlayWindows
@@ -49,6 +48,10 @@ class AirMouseController(
         val view = CursorOverlayView(context)
         view.style = settings.cursorStyle
         view.cursorDp = settings.cursorSizeDp
+        view.trailStyle = settings.trailStyle
+        view.trailThickness = settings.trailThickness
+        view.trailLength = settings.trailLength
+        view.trailIntensity = settings.trailIntensity
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -126,9 +129,13 @@ class AirMouseController(
             x = x.coerceIn(0f, metrics.widthPixels.toFloat())
             y = y.coerceIn(0f, metrics.heightPixels.toFloat())
         }
-        overlay?.setCursor(x, y, pressed = dragLock, trail = settings.showTrail)
         overlay?.cursorDp = settings.cursorSizeDp
         overlay?.style = settings.cursorStyle
+        overlay?.trailStyle = settings.trailStyle
+        overlay?.trailThickness = settings.trailThickness
+        overlay?.trailLength = settings.trailLength
+        overlay?.trailIntensity = settings.trailIntensity
+        overlay?.setCursor(x, y, pressed = dragLock, trailOn = settings.showTrail && settings.trailStyle != "off")
         show()
         bumpIdle()
         lastMove = SystemClock.uptimeMillis()
@@ -167,84 +174,6 @@ class AirMouseController(
         main.removeCallbacks(hideRunnable)
         if (settings.hideAfterMs > 0 && !settings.alwaysShowCursor) {
             main.postDelayed(hideRunnable, settings.hideAfterMs)
-        }
-    }
-}
-
-class CursorOverlayView(context: Context) : FrameLayout(context) {
-    var cursorDp: Float = 48f
-    var style: String = "crosshair"
-    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
-    private var cx = 0f
-    private var cy = 0f
-    private var pressed = false
-    private val trail = ArrayList<android.graphics.PointF>(24)
-    private var flashUntil = 0L
-
-    init {
-        setWillNotDraw(false)
-        setBackgroundColor(android.graphics.Color.TRANSPARENT)
-    }
-
-    fun setCursor(x: Float, y: Float, pressed: Boolean = this.pressed, trail: Boolean = true) {
-        cx = x
-        cy = y
-        this.pressed = pressed
-        if (trail) {
-            this.trail.add(android.graphics.PointF(x, y))
-            while (this.trail.size > 18) this.trail.removeAt(0)
-        }
-        invalidate()
-    }
-
-    fun flash() {
-        flashUntil = SystemClock.uptimeMillis() + 140
-        invalidate()
-        postDelayed({ invalidate() }, 150)
-    }
-
-    override fun onDraw(canvas: android.graphics.Canvas) {
-        super.onDraw(canvas)
-        val density = resources.displayMetrics.density
-        val r = cursorDp * density / 2f
-        if (trail.size > 1) {
-            paint.style = android.graphics.Paint.Style.STROKE
-            paint.strokeWidth = 3f
-            for (i in 1 until trail.size) {
-                val a = i / trail.size.toFloat()
-                paint.color = android.graphics.Color.argb((80 * a).toInt(), 212, 168, 75)
-                canvas.drawLine(trail[i - 1].x, trail[i - 1].y, trail[i].x, trail[i].y, paint)
-            }
-        }
-        val flashing = SystemClock.uptimeMillis() < flashUntil
-        val gold = if (pressed || flashing) 0xFFFFE08A.toInt() else 0xFFD4A84B.toInt()
-        when (style) {
-            "dot" -> {
-                paint.style = android.graphics.Paint.Style.FILL
-                paint.color = gold
-                canvas.drawCircle(cx, cy, r * 0.55f, paint)
-            }
-            "pen" -> {
-                paint.style = android.graphics.Paint.Style.STROKE
-                paint.strokeWidth = 5f
-                paint.color = gold
-                canvas.drawLine(cx - r, cy + r, cx + r * 0.2f, cy - r * 0.2f, paint)
-                paint.style = android.graphics.Paint.Style.FILL
-                canvas.drawCircle(cx + r * 0.2f, cy - r * 0.2f, 5f, paint)
-            }
-            else -> {
-                paint.style = android.graphics.Paint.Style.STROKE
-                paint.strokeWidth = 6f
-                paint.color = gold
-                canvas.drawCircle(cx, cy, r, paint)
-                canvas.drawLine(cx - r * 1.35f, cy, cx + r * 1.35f, cy, paint)
-                canvas.drawLine(cx, cy - r * 1.35f, cx, cy + r * 1.35f, paint)
-                paint.style = android.graphics.Paint.Style.FILL
-                paint.color = 0xEE111111.toInt()
-                canvas.drawCircle(cx, cy, 5f, paint)
-                paint.color = gold
-                canvas.drawCircle(cx, cy, 3f, paint)
-            }
         }
     }
 }
