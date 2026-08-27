@@ -41,7 +41,6 @@ jobs:
       - name: Read version
         id: ver
         run: |
-          NAME=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/".*"/placeholder/' )
           NAME=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "tag=v$NAME" >> "$GITHUB_OUTPUT"
