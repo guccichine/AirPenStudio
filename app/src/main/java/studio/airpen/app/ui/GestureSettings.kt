@@ -63,7 +63,10 @@ fun GestureSettingsScreen() {
             }
         }
         Text("Profile: ${profile.name}", modifier = Modifier.padding(horizontal = 16.dp), color = Gold)
-        Text("Tap a gesture, pick an action, then tap Save.", modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), fontSize = 13.sp)
+        Text("Tap a gesture, pick an action, then tap Save. Hold a row after the next build for a clip preview.", modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), fontSize = 13.sp)
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            TrailPicker()
+        }
         Text(
             "To teach a gesture: Home practice pad → draw it → tap that button. Trained: ${state.gestureSamples.size}",
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -73,7 +76,7 @@ fun GestureSettingsScreen() {
             items(GestureId.entries.filter { it.category == filter }, key = { it.name }) { g ->
                 val bound = profile.map[g] ?: BoundAction()
                 Card(
-                    modifier = Modifier.fillMaxWidth().clickable { editing = g; savedMsg = null },
+                    modifier = Modifier.fillMaxWidth().goldHoverGlow().clickable { editing = g; savedMsg = null },
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -97,7 +100,7 @@ fun GestureSettingsScreen() {
         }
         Button(
             onClick = { savedMsg = if (AirPen.store.saveNow()) "Gestures saved" else "Save failed" },
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp).goldHoverGlow(),
         ) { Text("Save gestures") }
     }
     editing?.let { g ->
@@ -120,7 +123,7 @@ private fun GestureActionPicker(gesture: GestureId, onSaved: () -> Unit, onClose
         ) {
             Column(Modifier.padding(16.dp)) {
                 Text("Map ${gesture.label}", style = MaterialTheme.typography.titleLarge)
-                Text("Pick an action, then tap Save.", fontSize = 13.sp, color = Gold)
+                Text(destCopy(BoundAction(selected, arg)), fontSize = 13.sp, color = Gold)
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ActionGroup.entries.forEach { g ->
                         FilterChip(selected = group == g, onClick = { group = g }, label = { Text(g.name) })
