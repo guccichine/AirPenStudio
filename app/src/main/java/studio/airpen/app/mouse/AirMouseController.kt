@@ -10,6 +10,7 @@ import android.view.Gravity
 import android.view.WindowManager
 import studio.airpen.app.action.ActionExecutor
 import studio.airpen.app.data.MouseSettings
+import studio.airpen.app.data.TrailPrefs
 import studio.airpen.app.overlay.OverlayWindows
 import kotlin.math.abs
 import kotlin.math.pow
@@ -48,10 +49,10 @@ class AirMouseController(
         val view = CursorOverlayView(context)
         view.style = settings.cursorStyle
         view.cursorDp = settings.cursorSizeDp
-        view.trailStyle = settings.trailStyle
-        view.trailThickness = settings.trailThickness
-        view.trailLength = settings.trailLength
-        view.trailIntensity = settings.trailIntensity
+        view.trailStyle = TrailPrefs.style
+        view.trailThickness = TrailPrefs.thickness
+        view.trailLength = TrailPrefs.length
+        view.trailIntensity = TrailPrefs.intensity
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -131,11 +132,11 @@ class AirMouseController(
         }
         overlay?.cursorDp = settings.cursorSizeDp
         overlay?.style = settings.cursorStyle
-        overlay?.trailStyle = settings.trailStyle
-        overlay?.trailThickness = settings.trailThickness
-        overlay?.trailLength = settings.trailLength
-        overlay?.trailIntensity = settings.trailIntensity
-        overlay?.setCursor(x, y, pressed = dragLock, trailOn = settings.showTrail && settings.trailStyle != "off")
+        overlay?.trailStyle = TrailPrefs.style
+        overlay?.trailThickness = TrailPrefs.thickness
+        overlay?.trailLength = TrailPrefs.length
+        overlay?.trailIntensity = TrailPrefs.intensity
+        overlay?.setCursor(x, y, pressed = dragLock, trailOn = TrailPrefs.show && TrailPrefs.style != "off")
         show()
         bumpIdle()
         lastMove = SystemClock.uptimeMillis()
