@@ -5,6 +5,7 @@ import android.graphics.drawable.GradientDrawable
 import android.media.AudioManager
 import android.net.Uri
 import android.view.Gravity
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -27,29 +28,37 @@ import studio.airpen.app.data.ActionId
 import studio.airpen.app.data.AppMode
 import studio.airpen.app.data.BoundAction
 
+/**
+ * S Pen digitizer hover + Air Action demo.
+ *
+ * Uses View.setOnHoverListener + MotionEvent hover actions + BUTTON_STYLUS_PRIMARY,
+ * and also reads Samsung S Pen Remote / KeyEvent side-button state from [HoverBus].
+ */
 object HoverBus {
     val stylusHeld = MutableStateFlow(false)
     val hovering = MutableStateFlow(false)
 
     fun onKey(event: KeyEvent): Boolean {
-        val stylus = event.keyCode == KeyEvent.KEYCODE_STYLUS_BUTTON ||
-            event.source and android.view.InputDevice.SOURCE_STYLUS != 0
-        if (stylus) {
-            stylusHeld.value = event.action != KeyEvent.ACTION_UP
-        } else if (AirPen.isReady && AirPen.hub.buttonDown.value) {
-            stylusHeld.value = event.action != KeyEvent.ACTION_UP
+        val stylus = event.isFromStylus() ||
+            event.keyCode == KEYCODE_STYLUS_BUTTON ||
+            event.source and InputDevice.SOURCE_STYLUS != 0
+        if (!stylus) {
+            if (AirPen.isReady && AirPen.hub.buttonDown.value) {
+                stylusHeld.value = event.action != KeyEvent.ACTION_UP
+            }
+            return false
         }
+        stylusHeld.value = event.action != KeyEvent.ACTION_UP
         return false
     }
 
     fun onGeneric(event: MotionEvent): Boolean {
         val held = event.isButtonPressed(MotionEvent.BUTTON_STYLUS_PRIMARY) ||
-            (event.buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0 ||
-            (AirPen.isReady && AirPen.hub.buttonDown.value)
+            (event.buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0
         when (event.actionMasked) {
             MotionEvent.ACTION_HOVER_ENTER, MotionEvent.ACTION_HOVER_MOVE -> {
                 hovering.value = true
-                stylusHeld.value = held
+                stylusHeld.value = held || (AirPen.isReady && AirPen.hub.buttonDown.value)
             }
             MotionEvent.ACTION_HOVER_EXIT -> {
                 hovering.value = false
@@ -60,16 +69,26 @@ object HoverBus {
     }
 }
 
+/** KeyEvent.KEYCODE_STYLUS_BUTTON is @hide / API 34+ only. Numeric 308 is stable. */
+private const val KEYCODE_STYLUS_BUTTON = 308
+
+private fun KeyEvent.isFromStylus(): Boolean {
+    return (source and InputDevice.SOURCE_STYLUS) == InputDevice.SOURCE_STYLUS
+}
+
 private const val SAMPLE_VIDEO =
     "https://commondatastorage.googleapis.com/gtv-videos-library/sample/ForBiggerBlazes.mp4"
 
 @Composable
 fun HoverLab() {
     val host = remember { HoverLabHost() }
-    DisposableEffect(Unit) { onDispose { host.release() } }
+    DisposableEffect(Unit) {
+        onDispose { host.release() }
+    }
     AndroidView(
         factory = { host.build(it) },
         modifier = Modifier.fillMaxWidth().height(420.dp),
+        update = { host.syncButton() },
     )
 }
 
@@ -87,6 +106,12 @@ private class HoverLabHost {
             video?.suspend()
         }
         video = null
+    }
+
+    fun syncButton() {
+        if (AirPen.isReady && AirPen.hub.buttonDown.value && previewPlaying) {
+            expand(true)
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -111,6 +136,7 @@ private class HoverLabHost {
         videoBox = FrameLayout(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(160))
             background = boxDrawable(false)
+            contentDescription = "video preview"
         }
         video = VideoView(ctx).apply {
             setAudioFocusRequest(AudioManager.AUDIOFOCUS_NONE)
@@ -128,8 +154,16 @@ private class HoverLabHost {
             setPadding(dp(10), dp(8), dp(10), dp(8))
             setBackgroundColor(0x66000000)
         }
-        videoBox!!.addView(video, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        videoBox!!.addView(videoLabel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { gravity = Gravity.BOTTOM })
+        videoBox!!.addView(
+            video,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
+        )
+        videoBox!!.addView(
+            videoLabel,
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                gravity = Gravity.BOTTOM
+            },
+        )
         expandHost!!.addView(videoBox)
         root.addView(expandHost, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(160)))
 
@@ -193,9 +227,9 @@ private class HoverLabHost {
         }
         data class Dest(val tab: String, val title: String, val body: String)
         listOf(
-            Dest("Gestures", "Gestures tab", "Map flicks and the six live shapes."),
-            Dest("Mouse", "Mouse tab", "Air-mouse sensitivity, trail, and pointer cursor."),
-            Dest("Home", "Home tab", "Connect S Pen, practice pad, hover lab."),
+            Dest("Gestures", "Gestures tab", "Map flicks and the six live shapes. Cycle still lives here."),
+            Dest("Mouse", "Mouse tab", "Air-mouse sensitivity, trail, and pointer cursor overlay."),
+            Dest("Home", "Home tab", "Connect S Pen, practice pad, hover lab, and mode chips."),
         ).forEach { dest ->
             val tab = glowButton(ctx, dest.tab, dp)
             attachHover(tab) { ev ->
@@ -215,14 +249,20 @@ private class HoverLabHost {
             tabRow.addView(tab, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginEnd = dp(8) })
         }
         root.addView(tabRow)
-        root.addView(destCard, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(8) })
+        root.addView(
+            destCard,
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(8)
+            },
+        )
         return root
     }
 
     private fun stylusHeld(ev: MotionEvent): Boolean {
         val fromEvent = ev.isButtonPressed(MotionEvent.BUTTON_STYLUS_PRIMARY) ||
             (ev.buttonState and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0
-        return fromEvent || HoverBus.stylusHeld.value || (AirPen.isReady && AirPen.hub.buttonDown.value)
+        val fromSdk = AirPen.isReady && AirPen.hub.buttonDown.value
+        return fromEvent || fromSdk || HoverBus.stylusHeld.value
     }
 
     private fun startPreview() {
@@ -232,7 +272,12 @@ private class HoverLabHost {
 
     private fun stopPreview() {
         previewPlaying = false
-        video?.let { v -> runCatching { v.pause(); v.seekTo(1) } }
+        video?.let { v ->
+            runCatching {
+                v.pause()
+                v.seekTo(1)
+            }
+        }
     }
 
     private fun expand(on: Boolean) {
@@ -242,7 +287,11 @@ private class HoverLabHost {
         val box = videoBox ?: return
         val host = expandHost ?: return
         val lp = box.layoutParams
-        lp.height = if (on) host.resources.displayMetrics.heightPixels / 3 else (160 * host.resources.displayMetrics.density).toInt()
+        lp.height = if (on) {
+            host.resources.displayMetrics.heightPixels / 3
+        } else {
+            (160 * host.resources.displayMetrics.density).toInt()
+        }
         box.layoutParams = lp
         box.background = boxDrawable(true)
         if (on) startPreview()
@@ -269,21 +318,27 @@ private class HoverLabHost {
         }
     }
 
-    private fun boxDrawable(hot: Boolean) = GradientDrawable().apply {
-        setColor(0xFF101217.toInt())
-        cornerRadius = 28f
-        setStroke(if (hot) 8 else 2, if (hot) 0xE6D4A84B.toInt() else 0x66D4A84B)
+    private fun boxDrawable(hot: Boolean): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(0xFF101217.toInt())
+            cornerRadius = 28f
+            setStroke(if (hot) 8 else 2, if (hot) 0xE6D4A84B.toInt() else 0x66D4A84B)
+        }
     }
 
-    private fun glowDrawable(hot: Boolean) = GradientDrawable().apply {
-        setColor(if (hot) 0x3324C36A.toInt() else 0xFF22242C.toInt())
-        cornerRadius = 22f
-        setStroke(if (hot) 8 else 2, if (hot) 0xFFD4A84B.toInt() else 0xFF3A3D48.toInt())
+    private fun glowDrawable(hot: Boolean): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(if (hot) 0x3324C36A.toInt() else 0xFF22242C.toInt())
+            cornerRadius = 22f
+            setStroke(if (hot) 8 else 2, if (hot) 0xFFD4A84B.toInt() else 0xFF3A3D48.toInt())
+        }
     }
 
-    private fun cardDrawable() = GradientDrawable().apply {
-        setColor(0xFF22242C.toInt())
-        cornerRadius = 22f
-        setStroke(4, 0xFFD4A84B.toInt())
+    private fun cardDrawable(): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(0xFF22242C.toInt())
+            cornerRadius = 22f
+            setStroke(4, 0xFFD4A84B.toInt())
+        }
     }
 }

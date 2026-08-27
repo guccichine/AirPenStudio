@@ -2,7 +2,7 @@
 
 A full S Pen customisation app for Samsung Galaxy phones and tablets: **air gestures**, **air mouse**, and **pointer hover**.
 
-**1.4.0** goes back to the 1.1.1 S Pen feel and strips the extra modes that made Cycle get stuck.
+**1.4.2** keeps the 1.1.1 S Pen feel and compiles the hover lab against minSdk 28 (no hidden stylus keycode).
 
 - Live modes only: **GESTURE → MOUSE → POINTER** (Cycle walks those three and wraps)
 - Live shapes only: circle CW/CCW, square, check, cross, wave — plus the 8 flicks and button clicks
@@ -18,7 +18,7 @@ On your phone, open:
 
 **https://github.com/guccichine/AirPenStudio/releases**
 
-Download **AirPenStudio.apk** from **1.4.0**, **uninstall any older AirPen Studio first**, then follow [INSTALL.md](INSTALL.md) (Accessibility + Appear on top + disable Samsung Air actions for other apps).
+Download **AirPenStudio.apk** from **1.4.2**, **uninstall any older AirPen Studio first**, then follow [INSTALL.md](INSTALL.md) (Accessibility + Appear on top + disable Samsung Air actions for other apps).
 
 If Releases is empty, GitHub Actions is still building — wait a few minutes and refresh.
 
