@@ -46,22 +46,26 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.1
-          name: AirPen Studio 1.1.1
+          tag_name: v1.2.0
+          name: AirPen Studio 1.2.0
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            **1.1.1 rollback** — S Pen engine from 1.0.8 (two builds back).
+            **1.2.0 air-gesture accuracy** — same S Pen connection as 1.1.1, much tighter flicks.
 
-            1.1.0 auto-armed every motion event and kept the BLE session hogged, so the hardware S Pen stopped working. This build requires the side button again and clears those settings.
+            - One Euro IMU filter kills S Pen tremor without dulling flicks
+            - Radial dead zone: diagonals no longer get dropped
+            - Velocity-weighted heading uses the ballistic peak, not settle-in/out
+            - Cardinal bias: an up-flick with a bit of wrist drift stays up
+            - Check marks / zigzags are no longer stolen as diagonal flicks
+            - More → settings: cardinal bias, motion smoothing, settle trim, heading offset, adaptive dead zone
 
-            **Uninstall any older AirPen Studio first**, then install this APK. If the pen is still dead after uninstall, pop it in and out and reboot.
+            **Uninstall any older AirPen Studio first**, then install this APK.
 
             1. Download **AirPenStudio.apk** below and install it.
             2. Enable **Accessibility** and **Display over other apps**.
             3. Tap **Connect S Pen**.
-            4. **Air Type:** Type tab → Start Air Type. Hold the side button and write a letter.
-            5. If a letter is wrong: Home → turn on **Recognize as letter**, draw it, tap the correct letter to train.
-            6. **Gestures** tab: search actions (YouTube, share, zoom, jump to top, Wi-Fi, …) and bind wave / diamond / hook too.
+            4. Hold the side button and flick. Up/down still scrolls one page.
+            5. If flicks land on a diagonal, raise **Cardinal bias** in More → settings.
+            6. If the pen jitters, raise **Motion smoothing**. If flicks feel sticky, lower it.
 
-            Immediate fallback while this builds: [AirPenStudio 1.0.8 APK](https://github.com/guccichine/AirPenStudio/releases/download/v1.0.8/AirPenStudio.apk)
