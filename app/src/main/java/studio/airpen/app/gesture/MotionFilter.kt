@@ -59,10 +59,20 @@ class MotionFilter {
     private val fy = OneEuro()
     private val idle = ArrayList<Float>(96)
     private var noiseFloor = 0f
+    private val qx = FloatArray(3)
+    private val qy = FloatArray(3)
+    private var qi = 0
+    private var qn = 0
+    private var lastT = Long.MIN_VALUE
+    private var magEma = 0f
 
     fun reset() {
         fx.reset()
         fy.reset()
+        qi = 0
+        qn = 0
+        lastT = Long.MIN_VALUE
+        magEma = 0f
     }
 
     fun noteIdle(mag: Float) {
@@ -82,9 +92,30 @@ class MotionFilter {
     }
 
     fun step(dx: Float, dy: Float, t: Long, settings: GestureSettings, armed: Boolean): Pair<Float, Float>? {
-        val x = dx * settings.gainX
-        val y = dy * settings.gainY
-        val mag = hypot(x.toDouble(), y.toDouble()).toFloat()
+        if (t == lastT) return null
+        lastT = t
+        var x = dx * settings.gainX
+        var y = dy * settings.gainY
+        qx[qi] = x
+        qy[qi] = y
+        qi = (qi + 1) % 3
+        qn++
+        if (qn >= 3) {
+            x = med3(qx[0], qx[1], qx[2])
+            y = med3(qy[0], qy[1], qy[2])
+        }
+        var mag = hypot(x.toDouble(), y.toDouble()).toFloat()
+        if (magEma > 1e-5f && mag > magEma * 8f) {
+            if (!armed) {
+                noteIdle(magEma)
+                return null
+            }
+            val s = magEma * 8f / mag
+            x *= s
+            y *= s
+            mag = magEma * 8f
+        }
+        magEma = if (magEma <= 1e-8f) mag else magEma * 0.82f + mag * 0.18f
         val dz = effectiveDeadZone(settings)
         if (!armed && mag < dz) {
             noteIdle(mag)
@@ -98,6 +129,14 @@ class MotionFilter {
         val fmag = hypot(fxv.toDouble(), fyv.toDouble()).toFloat()
         if (!armed && fmag < dz) return null
         return fxv to fyv
+    }
+
+    private fun med3(a: Float, b: Float, c: Float): Float {
+        return if (a > b) {
+            if (b > c) b else if (a > c) c else a
+        } else {
+            if (a > c) a else if (b > c) c else b
+        }
     }
 }
 
