@@ -117,12 +117,12 @@ private class HoverLabHost {
     @SuppressLint("ClickableViewAccessibility")
     fun build(ctx: android.content.Context): View {
         val density = ctx.resources.displayMetrics.density
-        fun dp(v: Int) = (v * density).toInt()
+        fun px(v: Int) = (v * density).toInt()
 
         val root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(0xFF181A20.toInt())
-            setPadding(dp(12), dp(12), dp(12), dp(12))
+            setPadding(px(12), px(12), px(12), px(12))
         }
 
         val status = TextView(ctx).apply {
@@ -134,7 +134,7 @@ private class HoverLabHost {
 
         expandHost = FrameLayout(ctx)
         videoBox = FrameLayout(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(160))
+            layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, px(160))
             background = boxDrawable(false)
             contentDescription = "video preview"
         }
@@ -151,7 +151,7 @@ private class HoverLabHost {
             text = "VIDEO  ·  hover to preview  ·  hold side button to expand"
             setTextColor(0xFFFFFFFF.toInt())
             textSize = 12f
-            setPadding(dp(10), dp(8), dp(10), dp(8))
+            setPadding(px(10), px(8), px(10), px(8))
             setBackgroundColor(0x66000000)
         }
         videoBox!!.addView(
@@ -165,7 +165,7 @@ private class HoverLabHost {
             },
         )
         expandHost!!.addView(videoBox)
-        root.addView(expandHost, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(160)))
+        root.addView(expandHost, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, px(160)))
 
         attachHover(videoBox!!) { ev ->
             when (ev.actionMasked) {
@@ -190,10 +190,10 @@ private class HoverLabHost {
 
         val btnRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(10), 0, 0)
+            setPadding(0, px(10), 0, 0)
         }
         listOf("Connect", "Cycle mode", "Pointer").forEachIndexed { i, label ->
-            val btn = glowButton(ctx, label, dp)
+            val btn = glowButton(ctx, label, ::px)
             attachHover(btn) { ev ->
                 when (ev.actionMasked) {
                     MotionEvent.ACTION_HOVER_ENTER -> {
@@ -210,7 +210,9 @@ private class HoverLabHost {
                     2 -> AirPen.engine.setMode(AppMode.POINTER)
                 }
             }
-            btnRow.addView(btn, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginEnd = dp(8) })
+            val lp = LinearLayout.LayoutParams(0, px(48), 1f)
+            lp.marginEnd = px(8)
+            btnRow.addView(btn, lp)
         }
         root.addView(btnRow)
 
@@ -218,12 +220,12 @@ private class HoverLabHost {
             visibility = View.GONE
             setTextColor(0xFFE8E6E1.toInt())
             textSize = 13f
-            setPadding(dp(12), dp(10), dp(12), dp(10))
+            setPadding(px(12), px(10), px(12), px(10))
             background = cardDrawable()
         }
         val tabRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(10), 0, 0)
+            setPadding(0, px(10), 0, 0)
         }
         data class Dest(val tab: String, val title: String, val body: String)
         listOf(
@@ -231,7 +233,7 @@ private class HoverLabHost {
             Dest("Mouse", "Mouse tab", "Air-mouse sensitivity, trail, and pointer cursor overlay."),
             Dest("Home", "Home tab", "Connect S Pen, practice pad, hover lab, and mode chips."),
         ).forEach { dest ->
-            val tab = glowButton(ctx, dest.tab, dp)
+            val tab = glowButton(ctx, dest.tab, ::px)
             attachHover(tab) { ev ->
                 when (ev.actionMasked) {
                     MotionEvent.ACTION_HOVER_ENTER, MotionEvent.ACTION_HOVER_MOVE -> {
@@ -246,15 +248,14 @@ private class HoverLabHost {
                     }
                 }
             }
-            tabRow.addView(tab, LinearLayout.LayoutParams(0, dp(44), 1f).apply { marginEnd = dp(8) })
+            val lp = LinearLayout.LayoutParams(0, px(44), 1f)
+            lp.marginEnd = px(8)
+            tabRow.addView(tab, lp)
         }
         root.addView(tabRow)
-        root.addView(
-            destCard,
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(8)
-            },
-        )
+        val cardLp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        cardLp.topMargin = px(8)
+        root.addView(destCard, cardLp)
         return root
     }
 
@@ -305,7 +306,11 @@ private class HoverLabHost {
         }
     }
 
-    private fun glowButton(ctx: android.content.Context, label: String, dp: (Int) -> Int): TextView {
+    private fun glowButton(
+        ctx: android.content.Context,
+        label: String,
+        px: (Int) -> Int,
+    ): TextView {
         return TextView(ctx).apply {
             text = label
             gravity = Gravity.CENTER
@@ -314,7 +319,7 @@ private class HoverLabHost {
             background = glowDrawable(false)
             isClickable = true
             isFocusable = true
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            setPadding(px(8), px(8), px(8), px(8))
         }
     }
 
