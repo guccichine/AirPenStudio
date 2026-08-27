@@ -147,6 +147,23 @@ class AppStore(context: Context) {
                 },
             )
         }
+        if (next.version < 5) {
+            val g = next.gesture
+            next = next.copy(
+                version = 5,
+                gesture = g.copy(
+                    flickStraightness = kotlin.math.max(g.flickStraightness, 0.82f),
+                    motionSmoothing = if (g.motionSmoothing == 0f) 0.42f else g.motionSmoothing,
+                    cardinalBias = if (g.cardinalBias == 0f) 0.72f else g.cardinalBias,
+                    settleTrim = if (g.settleTrim == 0f) 0.12f else g.settleTrim,
+                    flickMinVelocity = if (g.flickMinVelocity == 0f) 1.35f else g.flickMinVelocity,
+                    templateMargin = if (g.templateMargin == 0f) 0.06f else g.templateMargin,
+                    adaptiveDeadZone = true,
+                    gainX = if (g.gainX == 0f) 1f else g.gainX,
+                    gainY = if (g.gainY == 0f) 1f else g.gainY,
+                ),
+            )
+        }
         if (next.version >= 6) {
             // 1.1.0 wrote version 6 with auto-arm / requireButton=false, which
             // kept the BLE S Pen session hogged so the hardware pen died.

@@ -83,6 +83,30 @@ class GestureRecognizerTest {
         assertEquals(" ", r.letter)
     }
 
+    @Test
+    fun noisyUpFlickStaysUp() {
+        val pts = (0..27).map { i ->
+            val t = i / 27f
+            Pt(0.12f * t + 0.04f * sin(i * 3.1).toFloat(), t + 0.04f * cos(i * 2.7).toFloat(), i * 12L)
+        }
+        val r = rec.recognizeStroke(pts, settings)
+        assertEquals("got ${r.gesture} ${r.notes} heading=${r.headingDeg}", GestureId.FLICK_UP, r.gesture)
+    }
+
+    @Test
+    fun checkIsNotAFlick() {
+        val verts = listOf(0f to 0.55f, 0.35f to 0.05f, 1f to 1f)
+        val r = rec.recognizeStroke(densify(verts), settings)
+        assertTrue("got ${r.gesture} ${r.notes}", r.gesture == GestureId.CHECK || r.notes != "flick")
+    }
+
+    @Test
+    fun cardinalBiasKeepsNearAxisUp() {
+        val pts = line(0f, 0f, 0.28f, 1f)
+        val r = rec.recognizeStroke(pts, settings)
+        assertEquals("got ${r.gesture} heading=${r.headingDeg}", GestureId.FLICK_UP, r.gesture)
+    }
+
     private fun line(x0: Float, y0: Float, x1: Float, y1: Float): List<Pt> {
         return (0..20).map { i ->
             val t = i / 20f

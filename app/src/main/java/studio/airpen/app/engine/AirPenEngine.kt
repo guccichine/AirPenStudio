@@ -18,6 +18,7 @@ import studio.airpen.app.data.AppStore
 import studio.airpen.app.data.BoundAction
 import studio.airpen.app.data.GestureId
 import studio.airpen.app.gesture.GestureRecognizer
+import studio.airpen.app.gesture.MotionFilter
 import studio.airpen.app.gesture.Recognition
 import studio.airpen.app.gesture.StrokeBuffer
 import studio.airpen.app.mouse.AirMouseController
@@ -37,6 +38,7 @@ class AirPenEngine(
     val executor: ActionExecutor,
 ) {
     val recognizer = GestureRecognizer()
+    val motionFilter = MotionFilter()
     val mouse = AirMouseController(context, executor)
     val hud = HudController(context)
     val typer = AirTypeEngine()
@@ -207,21 +209,24 @@ class AirPenEngine(
         lastMotionAt = SystemClock.uptimeMillis()
         scheduleIdle()
         val g = store.current.gesture
-        absX += m.dx
-        absY += m.dy
+        val filtered = motionFilter.step(m.dx, m.dy, m.t, g, drawing) ?: return
+        val dx = filtered.first
+        val dy = filtered.second
+        absX += dx
+        absY += dy
         when (mode) {
             AppMode.MOUSE, AppMode.POINTER, AppMode.CAMERA -> {
-                mouse.move(m.dx, m.dy)
+                mouse.move(dx, dy)
                 if (drawing) stroke.add(absX, absY, m.t)
             }
             AppMode.SCROLL -> {
                 mouse.attach()
                 val gain = store.current.mouse.scrollGain
-                if (kotlin.math.abs(m.dy) > g.deadZone || kotlin.math.abs(m.dx) > g.deadZone) {
+                if (kotlin.math.abs(dy) > g.deadZone || kotlin.math.abs(dx) > g.deadZone) {
                     if (hub.buttonDown.value) {
-                        mouse.scroll(-m.dx * gain, -m.dy * gain * 1.4f)
+                        mouse.scroll(-dx * gain, -dy * gain * 1.4f)
                     } else {
-                        mouse.move(m.dx, m.dy)
+                        mouse.move(dx, dy)
                     }
                 }
             }
@@ -235,7 +240,7 @@ class AirPenEngine(
             }
             AppMode.TYPE -> {
                 if (store.current.type.engine != "write") {
-                    mouse.move(m.dx, m.dy)
+                    mouse.move(dx, dy)
                     KeyboardOverlay.highlight(mouse.x, mouse.y)
                 }
                 if (drawing || !g.requireButton) {
@@ -252,6 +257,7 @@ class AirPenEngine(
             hub.registerListeners()
             hub.passAllMotion = true
             drawing = true
+            motionFilter.reset()
             stroke.clear()
             absX = 0f
             absY = 0f

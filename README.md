@@ -2,7 +2,9 @@
 
 A full S Pen customisation app for Samsung Galaxy phones and tablets: **air gestures** (8-way flicks, diagonals, and shapes), **air mouse from across the room**, and **air typing**.
 
-**1.1.1 is a rollback to the 1.0.8 S Pen engine.** 1.1.0 auto-armed every motion event and hogged the BLE pen so hardware S Pen stopped working. Uninstall 1.1.0 first.
+**1.2.0 is an air-gesture accuracy release.** Flicks use a One Euro IMU filter, a radial dead zone (diagonals no longer get dropped), velocity-weighted heading, and cardinal bias so an up-flick with a bit of wrist drift stays ↑. Shape matching waits until a stroke is actually a shape — check marks are no longer stolen as diagonal flicks.
+
+**1.1.1 was a rollback to the 1.0.8 S Pen engine.** 1.1.0 auto-armed every motion event and hogged the BLE pen so hardware S Pen stopped working. Uninstall 1.1.0 first.
 
 ## Install on S22 Ultra (download APK)
 
@@ -10,7 +12,7 @@ On your phone, open:
 
 **https://github.com/guccichine/AirPenStudio/releases**
 
-Download **AirPenStudio.apk** from **1.1.1** (or **1.0.8** if 1.1.1 is still building), **uninstall any older AirPen Studio first**, then follow [INSTALL.md](INSTALL.md) (Accessibility + Appear on top + disable Samsung Air actions for other apps).
+Download **AirPenStudio.apk** from **1.2.0** (or **1.1.1** if 1.2.0 is still building), **uninstall any older AirPen Studio first**, then follow [INSTALL.md](INSTALL.md) (Accessibility + Appear on top + disable Samsung Air actions for other apps).
 
 If Releases is empty, GitHub Actions is still building — wait a few minutes and refresh.
 
@@ -29,6 +31,7 @@ Samsung and S Pen are trademarks of Samsung Electronics. This project is not aff
 - **Profiles:** System, Reading, Media, Typing, plus your own. Per-app profile switching.
 - **Macros, HUD, haptics, invert axes, dead zone, sensitivity, export/import JSON.**
 - **Practice pad** on the Home screen so you can train the recogniser with a finger.
+- **Accuracy controls** in More → settings: cardinal bias, motion smoothing, settle trim, heading offset, adaptive dead zone.
 
 ## Supported hardware
 
