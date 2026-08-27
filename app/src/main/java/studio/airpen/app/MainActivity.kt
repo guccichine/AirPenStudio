@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import studio.airpen.app.service.AirPenBackground
 import studio.airpen.app.ui.AirPenAppUi
+import studio.airpen.app.ui.HoverBus
 import studio.airpen.app.ui.theme.AirPenTheme
 
 class MainActivity : ComponentActivity() {
@@ -59,6 +61,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        HoverBus.onGeneric(event)
+        return super.dispatchGenericMotionEvent(event)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        HoverBus.onKey(event)
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onResume() {
         super.onResume()
         if (!AirPen.isReady) return
@@ -82,9 +94,6 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         if (!AirPen.isReady) return
         try {
-            // Keep the Activity token — Samsung's SDK binds the BLE session to
-            // whatever Context called connect(). Swapping it for Application
-            // here is what dropped the pen after a couple of seconds.
             if (isFinishing) {
                 AirPen.hub.attachActivity(applicationContext)
             }
@@ -137,7 +146,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Called from the Home screen. Does not run at launch. */
     fun requestConnect() {
         val needed = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= 31) needed += Manifest.permission.BLUETOOTH_CONNECT
