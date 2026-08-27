@@ -37,7 +37,10 @@ class AirMouseController(
     private var vx = 0f
     private var vy = 0f
     private var lastMove = 0L
-    private val hideRunnable = Runnable { if (!settings.alwaysShowCursor) hide() }
+    private val hideRunnable = Runnable {
+        if (TrailPrefs.show && TrailPrefs.style != "off") return@Runnable
+        if (!settings.alwaysShowCursor) hide()
+    }
 
     var settings: MouseSettings = MouseSettings()
 
@@ -73,7 +76,7 @@ class AirMouseController(
         handle = added
         overlay = view
         overlayReady = true
-        view.setCursor(x, y)
+        view.setCursor(x, y, trailOn = true)
         visible = true
     }
 
@@ -94,6 +97,11 @@ class AirMouseController(
     }
 
     fun hide() {
+        if (TrailPrefs.show && TrailPrefs.style != "off") {
+            overlay?.visibility = android.view.View.VISIBLE
+            visible = true
+            return
+        }
         overlay?.visibility = android.view.View.GONE
         visible = false
     }
@@ -102,7 +110,7 @@ class AirMouseController(
         val metrics = context.resources.displayMetrics
         x = metrics.widthPixels / 2f
         y = metrics.heightPixels / 2f
-        overlay?.setCursor(x, y)
+        overlay?.setCursor(x, y, trailOn = true)
         show()
     }
 
@@ -136,7 +144,7 @@ class AirMouseController(
         overlay?.trailThickness = TrailPrefs.thickness
         overlay?.trailLength = TrailPrefs.length
         overlay?.trailIntensity = TrailPrefs.intensity
-        overlay?.setCursor(x, y, pressed = dragLock, trailOn = TrailPrefs.show && TrailPrefs.style != "off")
+        overlay?.setCursor(x, y, pressed = dragLock, trailOn = TrailPrefs.style != "off")
         show()
         bumpIdle()
         lastMove = SystemClock.uptimeMillis()
@@ -154,7 +162,7 @@ class AirMouseController(
             ActionExecutor.ClickKind.RIGHT -> executor.longPressAt(x, y)
             ActionExecutor.ClickKind.DRAG_TOGGLE -> {
                 dragLock = !dragLock
-                overlay?.setCursor(x, y, pressed = dragLock)
+                overlay?.setCursor(x, y, pressed = dragLock, trailOn = true)
             }
         }
         bumpIdle()
@@ -173,6 +181,7 @@ class AirMouseController(
 
     private fun bumpIdle() {
         main.removeCallbacks(hideRunnable)
+        if (TrailPrefs.show && TrailPrefs.style != "off") return
         if (settings.hideAfterMs > 0 && !settings.alwaysShowCursor) {
             main.postDelayed(hideRunnable, settings.hideAfterMs)
         }
