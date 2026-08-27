@@ -140,6 +140,34 @@ class GestureRecognizerTest {
         assertTrue("got ${r.gesture} ${r.notes}", r.notes != "flick")
     }
 
+    @Test
+    fun trainedZigzagMatchesYourStroke() {
+        val zig = densify(listOf(0f to 0f, 0.3f to 1f, 0.6f to 0f, 1f to 1f))
+        val resampled = Unistroke.resample(zig, 48)
+        val sample = studio.airpen.app.data.GestureSample(
+            GestureId.ZIGZAG.name,
+            resampled.map { it.x },
+            resampled.map { it.y },
+        )
+        val query = densify(listOf(0.05f to 0.08f, 0.32f to 0.95f, 0.62f to 0.06f, 0.98f to 0.9f))
+        val r = rec.recognizeStroke(query, settings, gestureSamples = listOf(sample))
+        assertEquals("got ${r.gesture} ${r.notes} score=${r.score}", GestureId.ZIGZAG, r.gesture)
+        assertTrue(r.notes.contains("trained"))
+    }
+
+    @Test
+    fun trainedZigzagDoesNotStealStraightFlick() {
+        val zig = densify(listOf(0f to 0f, 0.3f to 1f, 0.6f to 0f, 1f to 1f))
+        val resampled = Unistroke.resample(zig, 48)
+        val sample = studio.airpen.app.data.GestureSample(
+            GestureId.ZIGZAG.name,
+            resampled.map { it.x },
+            resampled.map { it.y },
+        )
+        val r = rec.recognizeStroke(line(0f, 0f, 1f, 0f), settings, gestureSamples = listOf(sample))
+        assertEquals(GestureId.FLICK_RIGHT, r.gesture)
+    }
+
     private fun line(x0: Float, y0: Float, x1: Float, y1: Float): List<Pt> {
         return (0..20).map { i ->
             val t = i / 20f

@@ -2,7 +2,7 @@
 
 A full S Pen customisation app for Samsung Galaxy phones and tablets: **air gestures** (8-way flicks, diagonals, and shapes), **air mouse from across the room**, and **air typing**.
 
-**1.3.0 is an air-gesture accuracy release.** Flicks take heading from the ballistic (high-speed) window so a post-flick droop no longer rotates ↑ into a diagonal. L / hook / check are gated as shapes, not stolen as flicks. IMU spikes get a 3-sample median before the One Euro filter.
+**1.3.1 trains from your own strokes.** Draw a gesture on the Home practice pad, tap the air-gesture you meant, and recognition uses that sample. 1.3.0’s ballistic-window heading and bent-stroke gate are still here. Side button required — 1.1.0 auto-arm is gone. Uninstall any older build first.
 
 **1.2.0** added the One Euro IMU filter, radial dead zone, velocity-weighted heading, and cardinal bias.
 
@@ -14,7 +14,7 @@ On your phone, open:
 
 **https://github.com/guccichine/AirPenStudio/releases**
 
-Download **AirPenStudio.apk** from **1.3.0**, **uninstall any older AirPen Studio first**, then follow [INSTALL.md](INSTALL.md) (Accessibility + Appear on top + disable Samsung Air actions for other apps).
+Download **AirPenStudio.apk** from **1.3.1** (or **1.3.0** if 1.3.1 is still building), **uninstall any older AirPen Studio first**, then follow [INSTALL.md](INSTALL.md) (Accessibility + Appear on top + disable Samsung Air actions for other apps).
 
 If Releases is empty, GitHub Actions is still building — wait a few minutes and refresh.
 
@@ -32,7 +32,7 @@ Samsung and S Pen are trademarks of Samsung Electronics. This project is not aff
 - **Camera tracking:** fallback mouse for S Pens that dropped BLE (S25 Ultra and later). Track a bright tip in the camera.
 - **Profiles:** System, Reading, Media, Typing, plus your own. Per-app profile switching.
 - **Macros, HUD, haptics, invert axes, dead zone, sensitivity, export/import JSON.**
-- **Practice pad** on the Home screen so you can train the recogniser with a finger.
+- **Practice pad** on the Home screen: draw a gesture, tap the air-gesture button you meant, and AirPen stores that stroke as a template. Recognition prefers your samples.
 - **Accuracy controls** in More → settings: cardinal bias, motion smoothing, settle trim, heading offset, adaptive dead zone.
 
 ## Supported hardware

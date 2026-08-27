@@ -302,8 +302,9 @@ class AirPenEngine(
             store.current.letterSamples,
             typer.buffer.toString(),
             store.current.type.minConfidence,
+            store.current.gestureSamples,
         )
-        handleRecognition(rec, typeMode)
+        handleRecognition(rec, typeMode, fire = false)
     }
 
     private var lastStroke: List<studio.airpen.app.gesture.Pt> = emptyList()
@@ -315,6 +316,27 @@ class AirPenEngine(
             store.addLetterSample(letter, lastStroke)
             hud.show(letter, "trained")
         }
+    }
+
+    fun trainLastGesture(id: GestureId, points: List<studio.airpen.app.gesture.Pt>? = null) {
+        val src = points?.takeIf { it.size >= 4 } ?: lastStroke
+        if (src.size < 4) return
+        lastStroke = src
+        store.addGestureSample(id, src)
+        val n = store.current.gestureSamples.count { it.gesture == id.name }
+        hud.show("${id.symbol}  ${id.label}", "trained ×$n")
+        _live.value = "Trained ${id.label} ($n)"
+        val rec = recognizer.recognizeStroke(
+            src,
+            store.current.gesture,
+            false,
+            store.current.letterSamples,
+            typer.buffer.toString(),
+            store.current.type.minConfidence,
+            store.current.gestureSamples,
+        )
+        _last.value = rec
+        buzz(18)
     }
 
     private fun finishStroke(typeMode: Boolean) {
@@ -330,35 +352,42 @@ class AirPenEngine(
             store.current.letterSamples,
             typer.buffer.toString(),
             store.current.type.minConfidence,
+            store.current.gestureSamples,
         )
         handleRecognition(rec, typeMode)
         stroke.clear()
     }
 
-    private fun handleRecognition(rec: Recognition, typeMode: Boolean) {
+    private fun handleRecognition(rec: Recognition, typeMode: Boolean, fire: Boolean = true) {
         _last.value = rec
         if (typeMode) {
             val letter = rec.letter
             if (letter != null) {
-                when (letter) {
-                    "⌫" -> {
-                        typer.backspace()
-                        executor.execute(BoundAction(ActionId.TYPE_BACKSPACE))
-                    }
-                    " " -> executor.execute(BoundAction(ActionId.TYPE_SPACE))
-                    "\n" -> executor.execute(BoundAction(ActionId.TYPE_ENTER))
-                    "⇧" -> {
-                        typer.shift = !typer.shift
-                        hud.show("Shift", if (typer.shift) "ON" else "off")
-                    }
-                    else -> {
-                        val out = typer.consumeLetter(letter)
-                        if (out.isNotEmpty()) executor.injectText(out)
+                if (fire) {
+                    when (letter) {
+                        "⌫" -> {
+                            typer.backspace()
+                            executor.execute(BoundAction(ActionId.TYPE_BACKSPACE))
+                        }
+                        " " -> executor.execute(BoundAction(ActionId.TYPE_SPACE))
+                        "\n" -> executor.execute(BoundAction(ActionId.TYPE_ENTER))
+                        "⇧" -> {
+                            typer.shift = !typer.shift
+                            hud.show("Shift", if (typer.shift) "ON" else "off")
+                        }
+                        else -> {
+                            val out = typer.consumeLetter(letter)
+                            if (out.isNotEmpty()) executor.injectText(out)
+                        }
                     }
                 }
                 hud.show(letter, "score ${(rec.score * 100).toInt()}%" +
                     rec.alternatives.drop(1).take(2).joinToString("") { " · ${it.first}" })
                 buzz(20)
+                return
+            }
+            if (!fire) {
+                hud.show("?", rec.notes)
                 return
             }
         }
@@ -370,7 +399,7 @@ class AirPenEngine(
         hud.show("${g.symbol}  ${g.label}", bound.id.label)
         _live.value = "${g.label} → ${bound.id.label}"
         buzz(25)
-        executor.execute(bound)
+        if (fire) executor.execute(bound)
     }
 
     private fun registerClick(now: Long) {

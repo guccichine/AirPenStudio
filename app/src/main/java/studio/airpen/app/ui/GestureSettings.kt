@@ -53,6 +53,9 @@ fun GestureSettingsScreen() {
     var savedMsg by remember { mutableStateOf<String?>(null) }
     val state by AirPen.store.state.collectAsState()
     val profile = state.profiles.firstOrNull { it.id == state.activeProfileId } ?: state.profiles.first()
+    val sampleCounts = remember(state.gestureSamples) {
+        state.gestureSamples.groupingBy { it.gesture }.eachCount()
+    }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             GestureCategory.entries.forEach { c ->
@@ -61,6 +64,11 @@ fun GestureSettingsScreen() {
         }
         Text("Profile: ${profile.name}", modifier = Modifier.padding(horizontal = 16.dp), color = Gold)
         Text("Tap a gesture, pick an action, then tap Save.", modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), fontSize = 13.sp)
+        Text(
+            "To teach a gesture: Home practice pad → draw it → tap that button. Trained: ${state.gestureSamples.size}",
+            modifier = Modifier.padding(horizontal = 16.dp),
+            fontSize = 13.sp,
+        )
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(GestureId.entries.filter { it.category == filter }, key = { it.name }) { g ->
                 val bound = profile.map[g] ?: BoundAction()
@@ -72,7 +80,13 @@ fun GestureSettingsScreen() {
                         Text(g.symbol, fontSize = 22.sp, modifier = Modifier.width(40.dp))
                         Column(Modifier.weight(1f)) {
                             Text(g.label, fontWeight = FontWeight.Medium)
-                            Text(bound.id.label + bound.arg.let { if (it.isBlank()) "" else " · $it" }, fontSize = 13.sp, color = Gold)
+                            val trained = sampleCounts[g.name] ?: 0
+                            Text(
+                                bound.id.label + bound.arg.let { if (it.isBlank()) "" else " · $it" } +
+                                    if (trained > 0) " · $trained trained" else "",
+                                fontSize = 13.sp,
+                                color = Gold,
+                            )
                         }
                     }
                 }

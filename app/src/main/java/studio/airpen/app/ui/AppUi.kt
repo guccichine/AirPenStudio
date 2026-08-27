@@ -128,6 +128,11 @@ private fun HomeScreen(activity: MainActivity) {
             }
         }
         Text("Practice pad", fontWeight = FontWeight.Medium)
+        Text(
+            "Draw the gesture you actually do, then tap the air-gesture it should be. AirPen stores that stroke and matches yours from then on.",
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+        )
         PracticePad()
     }
 }
@@ -141,18 +146,29 @@ private fun PermRow(label: String, ok: Boolean, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PracticePad() {
     val pts = remember { mutableStateListOf<Pt>() }
     var typeMode by remember { mutableStateOf(false) }
-    Column {
+    var trainedMsg by remember { mutableStateOf<String?>(null) }
+    val state by AirPen.store.state.collectAsState()
+    val last by AirPen.engine.lastRecognition.collectAsState()
+    val sampleCounts = remember(state.gestureSamples) {
+        state.gestureSamples.groupingBy { it.gesture }.eachCount()
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Recognize as letter", modifier = Modifier.weight(1f))
-            Switch(checked = typeMode, onCheckedChange = { typeMode = it })
+            Text("Train letters instead", modifier = Modifier.weight(1f))
+            Switch(checked = typeMode, onCheckedChange = { typeMode = it; trainedMsg = null })
         }
         Box(Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF101217)).border(1.dp, Gold.copy(alpha = 0.4f), RoundedCornerShape(16.dp)).pointerInput(typeMode) {
             detectDragGestures(
-                onDragStart = { o -> pts.clear(); pts += Pt(o.x, -o.y, System.currentTimeMillis()) },
+                onDragStart = { o ->
+                    pts.clear()
+                    trainedMsg = null
+                    pts += Pt(o.x, -o.y, System.currentTimeMillis())
+                },
                 onDrag = { change, _ -> val p = change.position; pts += Pt(p.x, -p.y, System.currentTimeMillis()) },
                 onDragEnd = { AirPen.engine.feedPractice(pts.toList(), typeMode) },
             )
@@ -164,20 +180,82 @@ private fun PracticePad() {
                     drawPath(path, Gold, style = Stroke(width = 6f, cap = StrokeCap.Round))
                 }
             }
-            Text("Draw here", color = Color.White.copy(alpha = 0.35f), modifier = Modifier.align(Alignment.Center))
+            Text(
+                if (pts.size < 2) "Draw here" else "Release, then tap the gesture",
+                color = Color.White.copy(alpha = 0.35f),
+                modifier = Modifier.align(Alignment.Center),
+            )
         }
-        val last by AirPen.engine.lastRecognition.collectAsState()
-        if (typeMode && last.alternatives.isNotEmpty()) {
-            Text("Was it… tap to train your handwriting", fontSize = 13.sp, color = Gold, modifier = Modifier.padding(top = 8.dp))
+        val guess = last.gesture?.let { "${it.symbol} ${it.label}  ${(last.score * 100).toInt()}%" }
+            ?: last.letter?.let { "Letter $it  ${(last.score * 100).toInt()}%" }
+            ?: if (pts.size >= 4) "Unrecognized — tap the gesture you meant" else "Waiting for a stroke"
+        Text(guess, color = Gold, fontSize = 13.sp)
+        if (!typeMode) {
+            Text(
+                if (pts.size >= 4) "Tap the air gesture you meant — this stroke is saved as your template" else "Draw first, then tap the matching button",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+            )
+            Text("Direction", fontWeight = FontWeight.Medium, fontSize = 12.sp)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                GestureId.entries.filter { it.category == GestureCategory.DIRECTION }.forEach { g ->
+                    val n = sampleCounts[g.name] ?: 0
+                    FilterChip(
+                        selected = last.gesture == g,
+                        onClick = {
+                            if (pts.size < 4) {
+                                trainedMsg = "Draw the gesture first"
+                                return@FilterChip
+                            }
+                            AirPen.engine.trainLastGesture(g, pts.toList())
+                            trainedMsg = "Saved ${g.label}" + if (n + 1 > 1) " · ${n + 1} samples" else ""
+                        },
+                        label = { Text(if (n > 0) "${g.symbol} ${g.label} · $n" else "${g.symbol} ${g.label}") },
+                    )
+                }
+            }
+            Text("Shapes", fontWeight = FontWeight.Medium, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                GestureId.entries.filter { it.category == GestureCategory.SHAPE }.forEach { g ->
+                    val n = sampleCounts[g.name] ?: 0
+                    FilterChip(
+                        selected = last.gesture == g,
+                        onClick = {
+                            if (pts.size < 4) {
+                                trainedMsg = "Draw the gesture first"
+                                return@FilterChip
+                            }
+                            AirPen.engine.trainLastGesture(g, pts.toList())
+                            trainedMsg = "Saved ${g.label}" + if (n + 1 > 1) " · ${n + 1} samples" else ""
+                        },
+                        label = { Text(if (n > 0) "${g.symbol} ${g.label} · $n" else "${g.symbol} ${g.label}") },
+                    )
+                }
+            }
+            Text("Trained air-gesture samples: ${state.gestureSamples.size}", color = Gold, fontSize = 13.sp)
+            if (state.gestureSamples.isNotEmpty()) {
+                OutlinedButton(onClick = {
+                    AirPen.store.clearGestureSamples()
+                    trainedMsg = "Cleared trained gestures"
+                }, modifier = Modifier.fillMaxWidth()) { Text("Clear trained gestures") }
+            }
+        } else if (last.alternatives.isNotEmpty()) {
+            Text("Was it… tap to train your handwriting", fontSize = 13.sp, color = Gold)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 last.alternatives.take(4).forEach { (ch, score) ->
                     FilterChip(
                         selected = ch == last.letter,
-                        onClick = { AirPen.engine.trainLastLetter(ch) },
+                        onClick = {
+                            AirPen.engine.trainLastLetter(ch)
+                            trainedMsg = "Saved letter $ch"
+                        },
                         label = { Text("$ch  ${(score * 100).toInt()}%") },
                     )
                 }
             }
+        }
+        if (trainedMsg != null) {
+            Text(trainedMsg!!, color = Gold, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -222,7 +300,7 @@ private fun TypeScreen() {
         SwitchRow("Auto-capitalise", t.autoCapitalize) { upd { copy(autoCapitalize = it) } }
         SwitchRow("Word suggestions", t.suggestions) { upd { copy(suggestions = it) } }
         Text("Hold the side button and write a letter in the air. Flick ← backspace  → space  ↓ enter  ↑ shift.", fontSize = 13.sp)
-        Text("If a letter is wrong, turn on “Recognize as letter” on the Home practice pad, draw it, then tap the correct letter so AirPen learns your handwriting.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
+        Text("If a letter is wrong, Home practice pad → turn on “Train letters instead”, draw it, then tap the correct letter so AirPen learns your handwriting.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f))
         val samples = state.letterSamples.size
         Text("Trained samples: $samples", color = Gold)
         OutlinedButton(onClick = { AirPen.store.clearLetterSamples() }, modifier = Modifier.fillMaxWidth()) { Text("Clear trained letters") }
@@ -282,6 +360,12 @@ private fun SettingsPage() {
         SliderRow("Settle trim", g.settleTrim, 0f..0.3f) { upd { copy(settleTrim = it) } }
         SliderRow("Heading offset", g.headingOffsetDeg, -45f..45f) { upd { copy(headingOffsetDeg = it) } }
         SwitchRow("Adaptive dead zone", g.adaptiveDeadZone) { upd { copy(adaptiveDeadZone = it) } }
+        Text("Trained air gestures: ${state.gestureSamples.size}", color = Gold)
+        if (state.gestureSamples.isNotEmpty()) {
+            OutlinedButton(onClick = { AirPen.store.clearGestureSamples() }, modifier = Modifier.fillMaxWidth()) {
+                Text("Clear trained air gestures")
+            }
+        }
         Button(onClick = { AirPen.store.saveNow() }, modifier = Modifier.fillMaxWidth()) { Text("Save settings") }
         Button(onClick = { AirPen.store.resetDefaults() }, modifier = Modifier.fillMaxWidth()) { Text("Reset all defaults") }
     }
@@ -348,10 +432,11 @@ private fun AppsPage(activity: MainActivity) {
 @Composable
 private fun AboutPage() {
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("AirPen Studio 1.2.0", style = MaterialTheme.typography.headlineMedium)
-        Text("Air-gesture accuracy: One Euro IMU filter, radial dead zone, velocity-weighted heading, cardinal bias. Checks are no longer stolen as diagonal flicks.")
+        Text("AirPen Studio 1.3.1", style = MaterialTheme.typography.headlineMedium)
+        Text("Draw a gesture on the Home practice pad, then tap the air-gesture button you meant. AirPen stores your stroke and recognises from those samples.")
+        Text("1.3 accuracy is still here: ballistic-window heading, bent-stroke gate, One Euro IMU filter. Side button required — 1.1.0 auto-arm is not coming back.")
         Text("Flick up/down scrolls one page. Wave / diamond / hook are extra shapes. Gestures tab: search any action.")
-        Text("Air Type: hold the side button and write a letter. Train your handwriting on the Home practice pad.")
+        Text("Air Type: hold the side button and write a letter. Train letters on the same pad with the letter switch.")
         Text("On S22 Ultra: enable Accessibility + Appear on top, disable Samsung Air actions for other apps, pull the S Pen out.")
     }
 }

@@ -67,6 +67,25 @@ class AppStore(context: Context) {
         saveNow()
     }
 
+    fun addGestureSample(id: GestureId, points: List<studio.airpen.app.gesture.Pt>) {
+        if (points.size < 4) return
+        val resampled = studio.airpen.app.gesture.Unistroke.resample(points, 48)
+        val sample = GestureSample(id.name, resampled.map { it.x }, resampled.map { it.y })
+        update { s ->
+            val existing = s.gestureSamples.filter { it.gesture == id.name }
+            val kept = if (existing.size >= 8) {
+                s.gestureSamples.filterNot { it.gesture == id.name } + existing.takeLast(7)
+            } else s.gestureSamples
+            s.copy(gestureSamples = (kept + sample).takeLast(96))
+        }
+        saveNow()
+    }
+
+    fun clearGestureSamples() {
+        update { it.copy(gestureSamples = emptyList()) }
+        saveNow()
+    }
+
     fun saveNow(): Boolean {
         return persistSync(current)
     }
@@ -164,13 +183,16 @@ class AppStore(context: Context) {
                 ),
             )
         }
-        if (next.version >= 6) {
+        if (next.version >= 6 && next.version < 7) {
             // 1.1.0 wrote version 6 with auto-arm / requireButton=false, which
             // kept the BLE S Pen session hogged so the hardware pen died.
             next = next.copy(
                 version = 5,
                 gesture = GestureSettings(),
             )
+        }
+        if (next.version < 7) {
+            next = next.copy(version = 7)
         }
         return next
     }

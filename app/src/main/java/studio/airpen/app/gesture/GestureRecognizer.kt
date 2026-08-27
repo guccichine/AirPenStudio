@@ -1,6 +1,7 @@
 package studio.airpen.app.gesture
 
 import studio.airpen.app.data.GestureId
+import studio.airpen.app.data.GestureSample
 import studio.airpen.app.data.GestureSettings
 import studio.airpen.app.data.LetterSample
 import kotlin.math.PI
@@ -27,6 +28,7 @@ class GestureRecognizer {
         userSamples: List<LetterSample> = emptyList(),
         prefix: String = "",
         minLetter: Float = 0.40f,
+        gestureSamples: List<GestureSample> = emptyList(),
     ): Recognition {
         if (points.size < 4) return Recognition(notes = "too-short")
         val cleaned = StrokePrep.prepare(points, settings)
@@ -110,6 +112,15 @@ class GestureRecognizer {
             )
         }
 
+        if (gestureSamples.isNotEmpty()) {
+            val trained = matchTrained(cleaned, gestureSamples)
+            if (trained != null && trained.score >= 0.46f) {
+                if (!flickLike || trained.score >= 0.58f) {
+                    return trained.copy(headingDeg = deg, closed = closed)
+                }
+            }
+        }
+
         if (flickLike) {
             val flick = headingToFlick(deg, core, settings.cardinalBias)
             val score = (straight * 0.7f + min(1f, ballistic / 3f) * 0.3f).coerceIn(0f, 1f)
@@ -162,12 +173,36 @@ class GestureRecognizer {
             )
         }
 
+        val trainedFallback = if (gestureSamples.isEmpty()) null else matchTrained(cleaned, gestureSamples)
+        if (trainedFallback != null && trainedFallback.score >= 0.38f) {
+            return trainedFallback.copy(headingDeg = deg, closed = closed, notes = "trained-fallback")
+        }
+
         return Recognition(
             score = top?.second ?: 0f,
             headingDeg = deg,
             closed = closed,
             notes = "unrecognized",
             alternatives = ranked.take(3).map { it.first.name to it.second },
+        )
+    }
+
+    private fun matchTrained(points: List<Pt>, samples: List<GestureSample>): Recognition? {
+        val templates = samples.mapNotNull { s ->
+            if (s.x.size < 4 || s.x.size != s.y.size) return@mapNotNull null
+            val id = runCatching { GestureId.valueOf(s.gesture) }.getOrNull() ?: return@mapNotNull null
+            val pts = s.x.indices.map { i -> Pt(s.x[i], s.y[i]) }
+            Unistroke.Template(id.name, Unistroke.normalizeKeepAspect(pts))
+        }
+        if (templates.isEmpty()) return null
+        val ranked = GestureRanker.ranked(points, templates)
+        val top = ranked.firstOrNull() ?: return null
+        val id = runCatching { GestureId.valueOf(top.first.name) }.getOrNull() ?: return null
+        return Recognition(
+            gesture = id,
+            score = (top.second * 1.12f).coerceIn(0f, 1f),
+            notes = "trained",
+            alternatives = ranked.drop(1).take(3).map { it.first.name to it.second },
         )
     }
 

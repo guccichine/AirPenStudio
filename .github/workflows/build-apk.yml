@@ -58,19 +58,16 @@ jobs:
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            **${{ steps.ver.outputs.name }} air-gesture accuracy** — same S Pen connection as 1.1.1, tighter flicks.
+            **${{ steps.ver.outputs.name }} — train from your own strokes.** Draw a gesture, tap the air-gesture button you meant, and AirPen stores that drawing as a template. Recognition uses your samples first.
 
-            - Ballistic-window heading: post-flick droop no longer rotates ↑ into a diagonal
-            - Bent-stroke gate: L / hook / check are no longer stolen as flicks
-            - 3-sample median + spike clamp on IMU before the One Euro filter
-            - One Euro IMU filter, radial dead zone, velocity-weighted heading, cardinal bias
+            1.3 accuracy is still here (ballistic-window heading, bent-stroke gate, One Euro IMU). S Pen still requires the side button.
 
             **Uninstall any older AirPen Studio first**, then install this APK.
 
             1. Download **AirPenStudio.apk** below and install it.
             2. Enable **Accessibility** and **Display over other apps**.
             3. Tap **Connect S Pen**.
-            4. Hold the side button and flick. Up/down still scrolls one page.
-            5. If flicks land on a diagonal, raise **Cardinal bias** in More → settings.
-            6. If the pen jitters, raise **Motion smoothing**. If flicks feel sticky, lower it.
+            4. **Train a gesture:** Home → Practice pad → draw it with a finger → tap the matching air-gesture chip. Draw it again to confirm it now matches yours.
+            5. **Air Type:** Type tab → Start Air Type. Hold the side button and write a letter. Same pad, turn on **Train letters instead**.
+            6. If flicks land on a diagonal, raise **Cardinal bias** in More → settings.
 
