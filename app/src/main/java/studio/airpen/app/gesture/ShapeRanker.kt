@@ -23,9 +23,9 @@ object ShapeRanker {
             if (gate <= 0f) continue
             var score = 0f
             for (pts in candidates) {
-                val oriented = Unistroke.recognizeOriented(pts, listOf(named.template), 18f * (Math.PI / 180f).toFloat())
+                val dollar = Unistroke.recognize(pts, listOf(named.template))
                 val cloud = Unistroke.recognizeCloud(pts, listOf(named.template))
-                score = max(score, max(oriented?.second ?: 0f, (cloud?.second ?: 0f) * 0.92f))
+                score = max(score, max(dollar?.second ?: 0f, (cloud?.second ?: 0f) * 0.94f))
             }
             score *= gate
             if (score > bestScore) {
@@ -36,9 +36,9 @@ object ShapeRanker {
         val id = bestId ?: return null
         if (id == GestureId.CIRCLE_CW || id == GestureId.CIRCLE_CCW) {
             val circled = if (turns < 0) GestureId.CIRCLE_CW else GestureId.CIRCLE_CCW
-            return circled to bestScore
+            return circled to bestScore.coerceAtMost(1f)
         }
-        return id to bestScore
+        return id to bestScore.coerceAtMost(1f)
     }
 
     private fun gate(
