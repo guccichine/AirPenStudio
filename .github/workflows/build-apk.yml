@@ -41,6 +41,7 @@ jobs:
       - name: Read version
         id: ver
         run: |
+          NAME=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/".*"/placeholder/' )
           NAME=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "tag=v$NAME" >> "$GITHUB_OUTPUT"
@@ -58,7 +59,7 @@ jobs:
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            **${{ steps.ver.outputs.name }} — train from your own strokes.** Draw a gesture, tap the air-gesture button you meant, and AirPen stores that drawing as a template. Recognition uses your samples first.
+            **${{ steps.ver.outputs.name }} — glow trail + hover previews.** Air mouse draws a gold glow trail (28 styles). Buttons glow when hovered or pressed. Hold a gesture or a setup row to peek the clip and the destination page.
 
             1.3 accuracy is still here (ballistic-window heading, bent-stroke gate, One Euro IMU). S Pen still requires the side button.
 
@@ -70,4 +71,3 @@ jobs:
             4. **Train a gesture:** Home → Practice pad → draw it with a finger → tap the matching air-gesture chip. Draw it again to confirm it now matches yours.
             5. **Air Type:** Type tab → Start Air Type. Hold the side button and write a letter. Same pad, turn on **Train letters instead**.
             6. If flicks land on a diagonal, raise **Cardinal bias** in More → settings.
-
