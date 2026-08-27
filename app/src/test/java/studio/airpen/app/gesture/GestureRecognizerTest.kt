@@ -107,6 +107,39 @@ class GestureRecognizerTest {
         assertEquals("got ${r.gesture} heading=${r.headingDeg}", GestureId.FLICK_UP, r.gesture)
     }
 
+    @Test
+    fun reverseSettleDoesNotRotateUpFlick() {
+        val pts = ArrayList<Pt>()
+        pts += line(0f, 0f, 0f, 1f)
+        var t = pts.last().t
+        for (i in 1..10) {
+            t += 28
+            pts += Pt(0.012f * i, 1f - 0.01f * i, t)
+        }
+        val r = rec.recognizeStroke(pts, settings)
+        assertEquals("got ${r.gesture} ${r.notes} heading=${r.headingDeg}", GestureId.FLICK_UP, r.gesture)
+    }
+
+    @Test
+    fun lShapeIsNotAFlick() {
+        val verts = listOf(0f to 1f, 0f to 0f, 1f to 0f)
+        val r = rec.recognizeStroke(densify(verts), settings)
+        assertTrue("got ${r.gesture} ${r.notes}", r.notes != "flick")
+        assertTrue(
+            "L stolen as ${r.gesture}",
+            r.gesture != GestureId.FLICK_DOWN &&
+                r.gesture != GestureId.FLICK_RIGHT &&
+                r.gesture != GestureId.FLICK_DOWN_RIGHT,
+        )
+    }
+
+    @Test
+    fun hookIsNotAFlick() {
+        val verts = listOf(0.15f to 1f, 0.2f to 0.15f, 0.55f to 0f, 1f to 0.35f)
+        val r = rec.recognizeStroke(densify(verts), settings)
+        assertTrue("got ${r.gesture} ${r.notes}", r.notes != "flick")
+    }
+
     private fun line(x0: Float, y0: Float, x1: Float, y1: Float): List<Pt> {
         return (0..20).map { i ->
             val t = i / 20f

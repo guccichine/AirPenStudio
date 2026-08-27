@@ -31,6 +31,7 @@ class GestureRecognizer {
         if (points.size < 4) return Recognition(notes = "too-short")
         val cleaned = StrokePrep.prepare(points, settings)
         if (cleaned.size < 4) return Recognition(notes = "too-short")
+        val core = Unistroke.ballisticWindow(cleaned)
         val len = Unistroke.pathLength(cleaned)
         val end = hypot(
             (cleaned.last().x - cleaned.first().x).toDouble(),
@@ -40,32 +41,40 @@ class GestureRecognizer {
             return Recognition(notes = "dead-zone")
         }
 
-        val straight = if (len <= 1e-4f) 0f else (end / len)
-        val vh = Unistroke.velocityHeading(cleaned)
-        val netHeading = Unistroke.heading(cleaned)
+        val coreLen = Unistroke.pathLength(core)
+        val coreEnd = hypot(
+            (core.last().x - core.first().x).toDouble(),
+            (core.last().y - core.first().y).toDouble(),
+        ).toFloat()
+        val straight = if (coreLen <= 1e-4f) 0f else (coreEnd / coreLen)
+        val vh = Unistroke.velocityHeading(core)
+        val netHeading = Unistroke.heading(core)
         val heading = if (angleDiff(vh, netHeading) < 0.85f) vh else netHeading
         val deg = (((heading * 180f / PI.toFloat()) + settings.headingOffsetDeg) + 360f) % 360f
         val closed = Unistroke.isClosed(cleaned)
         val circ = Unistroke.circularity(cleaned)
-        val turns = Unistroke.windingTurns(cleaned)
+        val turns = Unistroke.windingTurns(core)
         val aspect = Unistroke.boundingAspect(cleaned)
-        val corners = Unistroke.cornerCount(cleaned)
-        val ballistic = Unistroke.ballistic(cleaned)
-        val duration = cleaned.last().t - cleaned.first().t
+        val corners = Unistroke.cornerCount(core)
+        val shapeCorners = Unistroke.cornerCount(cleaned)
+        val bent = Unistroke.bentStroke(cleaned)
+        val ballistic = Unistroke.ballistic(core)
+        val duration = core.last().t - core.first().t
 
         val flickLike = !closed &&
+            !bent &&
             corners <= 1 &&
             abs(turns) < 0.32f &&
             straight >= settings.flickStraightness &&
             (ballistic >= settings.flickMinVelocity * 0.72f || duration <= 0L || duration < 520L) &&
-            end >= len * 0.55f
+            coreEnd >= coreLen * 0.55f
 
         if (typeMode) {
             val ax = abs(kotlin.math.cos(heading.toDouble())).toFloat()
             val ay = abs(kotlin.math.sin(heading.toDouble())).toFloat()
             val horizontalDart = straight >= 0.88f && ax > 0.82f && flickLike
             if (horizontalDart) {
-                val flick = headingToFlick(deg, cleaned, settings.cardinalBias)
+                val flick = headingToFlick(deg, core, settings.cardinalBias)
                 if (flick == GestureId.FLICK_LEFT || flick == GestureId.FLICK_DOWN_LEFT || flick == GestureId.FLICK_UP_LEFT) {
                     return Recognition(gesture = GestureId.FLICK_LEFT, letter = "⌫", score = straight, headingDeg = deg, notes = "bs")
                 }
@@ -87,7 +96,7 @@ class GestureRecognizer {
             }
             val verticalDart = straight >= 0.90f && ay > 0.85f && flickLike
             if (verticalDart) {
-                return if (headingToFlick(deg, cleaned, settings.cardinalBias) == GestureId.FLICK_UP) {
+                return if (headingToFlick(deg, core, settings.cardinalBias) == GestureId.FLICK_UP) {
                     Recognition(gesture = GestureId.FLICK_UP, letter = "⇧", score = straight, headingDeg = deg, notes = "sh")
                 } else {
                     Recognition(gesture = GestureId.FLICK_DOWN, letter = "\n", score = straight, headingDeg = deg, notes = "nl")
@@ -102,7 +111,7 @@ class GestureRecognizer {
         }
 
         if (flickLike) {
-            val flick = headingToFlick(deg, cleaned, settings.cardinalBias)
+            val flick = headingToFlick(deg, core, settings.cardinalBias)
             val score = (straight * 0.7f + min(1f, ballistic / 3f) * 0.3f).coerceIn(0f, 1f)
             return Recognition(gesture = flick, score = score, headingDeg = deg, notes = "flick")
         }
@@ -137,16 +146,16 @@ class GestureRecognizer {
         if (closed && aspect > 0.72f && circ in 0.45f..0.78f) {
             return Recognition(gesture = GestureId.SQUARE, score = aspect, headingDeg = deg, closed = true, notes = "geo-square")
         }
-        if (closed && circ in 0.35f..0.7f && corners >= 2) {
+        if (closed && circ in 0.35f..0.7f && shapeCorners >= 2) {
             return Recognition(gesture = GestureId.TRIANGLE, score = circ, headingDeg = deg, closed = true, notes = "geo-tri")
         }
         if (closed && aspect > 0.55f && circ in 0.28f..0.55f) {
             return Recognition(gesture = GestureId.DIAMOND, score = aspect, headingDeg = deg, closed = true, notes = "geo-diamond")
         }
 
-        if (straight >= settings.flickStraightness * 0.92f && corners <= 1 && abs(turns) < 0.28f) {
+        if (!bent && straight >= settings.flickStraightness * 0.92f && corners <= 1 && abs(turns) < 0.28f) {
             return Recognition(
-                gesture = headingToFlick(deg, cleaned, settings.cardinalBias),
+                gesture = headingToFlick(deg, core, settings.cardinalBias),
                 score = straight,
                 headingDeg = deg,
                 notes = "flick-fallback",

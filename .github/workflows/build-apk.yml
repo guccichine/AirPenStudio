@@ -38,6 +38,13 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk dist/AirPenStudio.apk
           ls -lh dist/AirPenStudio.apk
 
+      - name: Read version
+        id: ver
+        run: |
+          NAME=$(grep -m1 'versionName' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NAME" >> "$GITHUB_OUTPUT"
+
       - uses: actions/upload-artifact@v4
         with:
           name: AirPenStudio
@@ -46,19 +53,17 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.0
-          name: AirPen Studio 1.2.0
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: AirPen Studio ${{ steps.ver.outputs.name }}
           files: dist/AirPenStudio.apk
           fail_on_unmatched_files: true
           body: |
-            **1.2.0 air-gesture accuracy** — same S Pen connection as 1.1.1, much tighter flicks.
+            **${{ steps.ver.outputs.name }} air-gesture accuracy** — same S Pen connection as 1.1.1, tighter flicks.
 
-            - One Euro IMU filter kills S Pen tremor without dulling flicks
-            - Radial dead zone: diagonals no longer get dropped
-            - Velocity-weighted heading uses the ballistic peak, not settle-in/out
-            - Cardinal bias: an up-flick with a bit of wrist drift stays up
-            - Check marks / zigzags are no longer stolen as diagonal flicks
-            - More → settings: cardinal bias, motion smoothing, settle trim, heading offset, adaptive dead zone
+            - Ballistic-window heading: post-flick droop no longer rotates ↑ into a diagonal
+            - Bent-stroke gate: L / hook / check are no longer stolen as flicks
+            - 3-sample median + spike clamp on IMU before the One Euro filter
+            - One Euro IMU filter, radial dead zone, velocity-weighted heading, cardinal bias
 
             **Uninstall any older AirPen Studio first**, then install this APK.
 
