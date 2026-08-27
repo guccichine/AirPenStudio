@@ -57,26 +57,28 @@ fun GestureSettingsScreen() {
         state.gestureSamples.groupingBy { it.gesture }.eachCount()
     }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.horizontalScroll(rememberScrollState()).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GestureCategory.entries.forEach { c ->
-                FilterChip(selected = filter == c, onClick = { filter = c }, label = { Text(c.name) })
-            }
+        Row(
+            Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(selected = filter == GestureCategory.DIRECTION, onClick = { filter = GestureCategory.DIRECTION }, label = { Text("Direction") })
+            FilterChip(selected = filter == GestureCategory.SHAPE, onClick = { filter = GestureCategory.SHAPE }, label = { Text("Shapes") })
+            FilterChip(selected = filter == GestureCategory.BUTTON, onClick = { filter = GestureCategory.BUTTON }, label = { Text("Buttons") })
         }
         Text("Profile: ${profile.name}", modifier = Modifier.padding(horizontal = 16.dp), color = Gold)
-        Text("Tap a gesture, pick an action, then tap Save. Hold a row after the next build for a clip preview.", modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), fontSize = 13.sp)
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            TrailPicker()
-        }
         Text(
-            "To teach a gesture: Home practice pad → draw it → tap that button. Trained: ${state.gestureSamples.size}",
-            modifier = Modifier.padding(horizontal = 16.dp),
+            "Tap Direction, Shapes or Buttons, then tap a row to map it.",
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             fontSize = 13.sp,
         )
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+            TrailPicker()
+        }
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(GestureId.entries.filter { it.category == filter }, key = { it.name }) { g ->
                 val bound = profile.map[g] ?: BoundAction()
                 Card(
-                    modifier = Modifier.fillMaxWidth().goldHoverGlow().clickable { editing = g; savedMsg = null },
+                    modifier = Modifier.fillMaxWidth().clickable { editing = g; savedMsg = null },
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -100,7 +102,7 @@ fun GestureSettingsScreen() {
         }
         Button(
             onClick = { savedMsg = if (AirPen.store.saveNow()) "Gestures saved" else "Save failed" },
-            modifier = Modifier.fillMaxWidth().padding(16.dp).goldHoverGlow(),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
         ) { Text("Save gestures") }
     }
     editing?.let { g ->
@@ -118,7 +120,7 @@ private fun GestureActionPicker(gesture: GestureId, onSaved: () -> Unit, onClose
     var query by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).clickable { onClose() }) {
         Card(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(560.dp),
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(560.dp).clickable(enabled = false) {},
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
         ) {
             Column(Modifier.padding(16.dp)) {
