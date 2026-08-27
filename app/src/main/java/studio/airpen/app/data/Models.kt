@@ -1,8 +1,18 @@
 package studio.airpen.app.data
 
 enum class AppMode {
-    GESTURE, MOUSE, TYPE, SCROLL, POINTER, MEDIA, CAMERA,
+    GESTURE, MOUSE, POINTER,
+    /** Kept so older saves still parse. UI, cycle, and setMode map these away. */
+    TYPE, SCROLL, MEDIA, CAMERA,
 }
+
+fun AppMode.canonical(): AppMode = when (this) {
+    AppMode.MOUSE -> AppMode.MOUSE
+    AppMode.POINTER, AppMode.SCROLL, AppMode.CAMERA -> AppMode.POINTER
+    else -> AppMode.GESTURE
+}
+
+val LIVE_MODES = listOf(AppMode.GESTURE, AppMode.MOUSE, AppMode.POINTER)
 
 enum class GestureId(val label: String, val symbol: String, val category: GestureCategory) {
     FLICK_UP("Flick up", "↑", GestureCategory.DIRECTION),
@@ -40,6 +50,20 @@ enum class GestureId(val label: String, val symbol: String, val category: Gestur
 }
 
 enum class GestureCategory { DIRECTION, SHAPE, BUTTON }
+
+fun GestureId.isLive(): Boolean = when (category) {
+    GestureCategory.DIRECTION, GestureCategory.BUTTON -> true
+    GestureCategory.SHAPE -> this in LIVE_SHAPES
+}
+
+val LIVE_SHAPES = setOf(
+    GestureId.CIRCLE_CW,
+    GestureId.CIRCLE_CCW,
+    GestureId.SQUARE,
+    GestureId.CHECK,
+    GestureId.CROSS,
+    GestureId.WAVE,
+)
 
 enum class ActionId(val label: String, val group: ActionGroup, val needsArg: ArgKind = ArgKind.NONE) {
     NONE("Do nothing", ActionGroup.SYSTEM),
@@ -193,7 +217,7 @@ data class GestureSample(val gesture: String = "FLICK_UP", val x: List<Float> = 
 data class GestureSettings(val holdToDraw: Boolean = true, val requireButton: Boolean = true, val minStrokeMs: Long = 80, val maxStrokeMs: Long = 4000, val flickStraightness: Float = 0.82f, val minFlickLength: Float = 0.18f, val shapeThreshold: Float = 0.62f, val deadZone: Float = 0.012f, val sampleHz: Int = 90, val invertMotionX: Boolean = false, val invertMotionY: Boolean = false, val showHud: Boolean = true, val hudTimeoutMs: Long = 1200, val haptic: Boolean = true, val sounds: Boolean = true, val batterySaver: Boolean = true, val idleSleepMs: Long = 20_000, val motionSmoothing: Float = 0.42f, val cardinalBias: Float = 0.72f, val settleTrim: Float = 0.12f, val flickMinVelocity: Float = 1.35f, val templateMargin: Float = 0.06f, val adaptiveDeadZone: Boolean = true, val headingOffsetDeg: Float = 0f, val gainX: Float = 1f, val gainY: Float = 1f)
 data class CameraSettings(val enabled: Boolean = false, val useFront: Boolean = true, val gain: Float = 1.6f, val mirror: Boolean = true)
 data class GeneralSettings(val startOnBoot: Boolean = false, val rememberMode: Boolean = true, val lastMode: AppMode = AppMode.GESTURE, val doubleClickMs: Long = 320, val longPressMs: Long = 520, val overlayOpacity: Float = 0.92f, val keepScreenOnWhenActive: Boolean = true, val notifyForeground: Boolean = true, val runInBackground: Boolean = true)
-data class AppState(val version: Int = 7, val activeProfileId: String = "system", val profiles: List<Profile> = defaultProfiles(), val macros: List<Macro> = defaultMacros(), val appProfileMap: Map<String, String> = emptyMap(), val mouse: MouseSettings = MouseSettings(), val type: TypeSettings = TypeSettings(), val gesture: GestureSettings = GestureSettings(), val camera: CameraSettings = CameraSettings(), val general: GeneralSettings = GeneralSettings(), val letterSamples: List<LetterSample> = emptyList(), val gestureSamples: List<GestureSample> = emptyList())
+data class AppState(val version: Int = 8, val activeProfileId: String = "system", val profiles: List<Profile> = defaultProfiles(), val macros: List<Macro> = defaultMacros(), val appProfileMap: Map<String, String> = emptyMap(), val mouse: MouseSettings = MouseSettings(), val type: TypeSettings = TypeSettings(), val gesture: GestureSettings = GestureSettings(), val camera: CameraSettings = CameraSettings(), val general: GeneralSettings = GeneralSettings(), val letterSamples: List<LetterSample> = emptyList(), val gestureSamples: List<GestureSample> = emptyList())
 
 fun defaultMacros(): List<Macro> = listOf(
     Macro("macro_goodnight", "Goodnight", listOf(MacroStep(BoundAction(ActionId.VOLUME_MUTE)), MacroStep(BoundAction(ActionId.DND_TOGGLE), 250), MacroStep(BoundAction(ActionId.LOCK_SCREEN), 400))),
