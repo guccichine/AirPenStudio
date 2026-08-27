@@ -12,8 +12,8 @@ android {
         applicationId = "studio.airpen.app"
         minSdk = 28
         targetSdk = 34
-        versionCode = 19
-        versionName = "1.3.5"
+        versionCode = 20
+        versionName = "1.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
         ndk {
