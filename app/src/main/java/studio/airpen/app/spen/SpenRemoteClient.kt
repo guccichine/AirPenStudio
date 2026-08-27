@@ -325,7 +325,8 @@ class SpenRemoteClient(
             var dy = me.deltaY
             if (settings.invertMotionX) dx = -dx
             if (settings.invertMotionY) dy = -dy
-            if (!passAllMotion && kotlin.math.abs(dx) < settings.deadZone && kotlin.math.abs(dy) < settings.deadZone) return@SpenEventListener
+            val mag = kotlin.math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
+            if (!passAllMotion && mag < settings.deadZone) return@SpenEventListener
             val event = PenMotion(dx, dy, me.timeStamp)
             main.post { onMotion(event) }
         } catch (t: Throwable) {

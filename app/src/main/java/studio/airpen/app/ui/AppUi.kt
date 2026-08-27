@@ -277,6 +277,11 @@ private fun SettingsPage() {
         SwitchRow("Battery saver (sleeps air motion when idle)", g.batterySaver) { upd { copy(batterySaver = it) } }
         SliderRow("Dead zone", g.deadZone, 0f..0.08f) { upd { copy(deadZone = it) } }
         SliderRow("Flick straightness", g.flickStraightness, 0.5f..0.95f) { upd { copy(flickStraightness = it) } }
+        SliderRow("Cardinal bias", g.cardinalBias, 0.2f..1f) { upd { copy(cardinalBias = it) } }
+        SliderRow("Motion smoothing", g.motionSmoothing, 0f..0.9f) { upd { copy(motionSmoothing = it) } }
+        SliderRow("Settle trim", g.settleTrim, 0f..0.3f) { upd { copy(settleTrim = it) } }
+        SliderRow("Heading offset", g.headingOffsetDeg, -45f..45f) { upd { copy(headingOffsetDeg = it) } }
+        SwitchRow("Adaptive dead zone", g.adaptiveDeadZone) { upd { copy(adaptiveDeadZone = it) } }
         Button(onClick = { AirPen.store.saveNow() }, modifier = Modifier.fillMaxWidth()) { Text("Save settings") }
         Button(onClick = { AirPen.store.resetDefaults() }, modifier = Modifier.fillMaxWidth()) { Text("Reset all defaults") }
     }
@@ -343,8 +348,8 @@ private fun AppsPage(activity: MainActivity) {
 @Composable
 private fun AboutPage() {
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("AirPen Studio 1.1.1", style = MaterialTheme.typography.headlineMedium)
-        Text("Rollback to the 1.0.8 S Pen engine. 1.1.0 auto-arm hogged the pen — this build requires the side button again.")
+        Text("AirPen Studio 1.2.0", style = MaterialTheme.typography.headlineMedium)
+        Text("Air-gesture accuracy: One Euro IMU filter, radial dead zone, velocity-weighted heading, cardinal bias. Checks are no longer stolen as diagonal flicks.")
         Text("Flick up/down scrolls one page. Wave / diamond / hook are extra shapes. Gestures tab: search any action.")
         Text("Air Type: hold the side button and write a letter. Train your handwriting on the Home practice pad.")
         Text("On S22 Ultra: enable Accessibility + Appear on top, disable Samsung Air actions for other apps, pull the S Pen out.")
