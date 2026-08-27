@@ -1,5 +1,6 @@
 package studio.airpen.app.gesture
 
+import studio.airpen.app.data.GestureCategory
 import studio.airpen.app.data.GestureId
 import studio.airpen.app.data.GestureSample
 import studio.airpen.app.data.GestureSettings
@@ -112,12 +113,12 @@ class GestureRecognizer {
             )
         }
 
-        if (gestureSamples.isNotEmpty()) {
+        // Trained $1 matching rotates strokes to a canonical angle, so every
+        // straight flick looks the same. Never let those samples pick direction.
+        if (!flickLike && gestureSamples.isNotEmpty()) {
             val trained = matchTrained(cleaned, gestureSamples)
-            if (trained != null && trained.score >= 0.46f) {
-                if (!flickLike || trained.score >= 0.58f) {
-                    return trained.copy(headingDeg = deg, closed = closed)
-                }
+            if (trained != null && trained.score >= 0.46f && trained.gesture?.category != GestureCategory.DIRECTION) {
+                return trained.copy(headingDeg = deg, closed = closed)
             }
         }
 
@@ -174,7 +175,7 @@ class GestureRecognizer {
         }
 
         val trainedFallback = if (gestureSamples.isEmpty()) null else matchTrained(cleaned, gestureSamples)
-        if (trainedFallback != null && trainedFallback.score >= 0.38f) {
+        if (trainedFallback != null && trainedFallback.score >= 0.38f && trainedFallback.gesture?.category != GestureCategory.DIRECTION) {
             return trainedFallback.copy(headingDeg = deg, closed = closed, notes = "trained-fallback")
         }
 
@@ -191,6 +192,7 @@ class GestureRecognizer {
         val templates = samples.mapNotNull { s ->
             if (s.x.size < 4 || s.x.size != s.y.size) return@mapNotNull null
             val id = runCatching { GestureId.valueOf(s.gesture) }.getOrNull() ?: return@mapNotNull null
+            if (id.category == GestureCategory.DIRECTION) return@mapNotNull null
             val pts = s.x.indices.map { i -> Pt(s.x[i], s.y[i]) }
             Unistroke.Template(id.name, Unistroke.normalizeKeepAspect(pts))
         }
