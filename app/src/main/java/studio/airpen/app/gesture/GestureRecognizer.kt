@@ -113,11 +113,9 @@ class GestureRecognizer {
             )
         }
 
-        // Trained $1 matching rotates strokes to a canonical angle, so every
-        // straight flick looks the same. Never let those samples pick direction.
         if (!flickLike && gestureSamples.isNotEmpty()) {
             val trained = matchTrained(cleaned, gestureSamples)
-            if (trained != null && trained.score >= 0.46f && trained.gesture?.category != GestureCategory.DIRECTION) {
+            if (trained != null && trained.score >= 0.62f && trained.gesture?.category != GestureCategory.DIRECTION) {
                 return trained.copy(headingDeg = deg, closed = closed)
             }
         }
@@ -133,35 +131,24 @@ class GestureRecognizer {
             return Recognition(gesture = g, score = circ.coerceAtMost(1f), headingDeg = deg, closed = true, notes = "geo-circle")
         }
 
-        val ranked = GestureRanker.ranked(cleaned, Templates.shapes.map { it.template })
-        val top = ranked.firstOrNull()
-        val second = ranked.getOrNull(1)
-        if (top != null && top.second >= settings.shapeThreshold) {
-            val margin = top.second - (second?.second ?: 0f)
-            if (margin >= settings.templateMargin || top.second >= settings.shapeThreshold + 0.08f) {
-                val named = Templates.shapes.first { it.template.name == top.first.name }
-                var id = named.id
-                if (id == GestureId.CIRCLE_CW || id == GestureId.CIRCLE_CCW) {
-                    id = if (turns < 0) GestureId.CIRCLE_CW else GestureId.CIRCLE_CCW
-                }
-                return Recognition(
-                    gesture = id,
-                    score = top.second,
-                    headingDeg = deg,
-                    closed = closed,
-                    notes = "template",
-                    alternatives = ranked.drop(1).take(3).map { it.first.name to it.second },
-                )
-            }
+        val shaped = ShapeRanker.best(cleaned, closed, circ, turns, shapeCorners, bent, aspect)
+        if (shaped != null && shaped.second >= max(0.42f, settings.shapeThreshold * 0.72f)) {
+            return Recognition(
+                gesture = shaped.first,
+                score = shaped.second,
+                headingDeg = deg,
+                closed = closed,
+                notes = "shape",
+            )
         }
 
-        if (closed && aspect > 0.72f && circ in 0.45f..0.78f) {
+        if (closed && aspect > 0.72f && circ in 0.45f..0.78f && shapeCorners >= 3) {
             return Recognition(gesture = GestureId.SQUARE, score = aspect, headingDeg = deg, closed = true, notes = "geo-square")
         }
-        if (closed && circ in 0.35f..0.7f && shapeCorners >= 2) {
+        if (closed && circ in 0.35f..0.7f && shapeCorners in 2..4) {
             return Recognition(gesture = GestureId.TRIANGLE, score = circ, headingDeg = deg, closed = true, notes = "geo-tri")
         }
-        if (closed && aspect > 0.55f && circ in 0.28f..0.55f) {
+        if (closed && aspect > 0.55f && circ in 0.28f..0.55f && shapeCorners >= 3) {
             return Recognition(gesture = GestureId.DIAMOND, score = aspect, headingDeg = deg, closed = true, notes = "geo-diamond")
         }
 
@@ -174,17 +161,11 @@ class GestureRecognizer {
             )
         }
 
-        val trainedFallback = if (gestureSamples.isEmpty()) null else matchTrained(cleaned, gestureSamples)
-        if (trainedFallback != null && trainedFallback.score >= 0.38f && trainedFallback.gesture?.category != GestureCategory.DIRECTION) {
-            return trainedFallback.copy(headingDeg = deg, closed = closed, notes = "trained-fallback")
-        }
-
         return Recognition(
-            score = top?.second ?: 0f,
+            score = shaped?.second ?: 0f,
             headingDeg = deg,
             closed = closed,
             notes = "unrecognized",
-            alternatives = ranked.take(3).map { it.first.name to it.second },
         )
     }
 
